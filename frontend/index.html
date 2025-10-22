@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consulta de Equipos</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f3f3f3;
+            padding: 30px;
+        }
+        h1 {
+            color: #333;
+        }
+        form {
+            margin-bottom: 20px;
+        }
+        input[type="number"] {
+            padding: 8px;
+            width: 200px;
+        }
+        button {
+            padding: 8px 12px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 6px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: white;
+            box-shadow: 0px 0px 5px #ccc;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #007bff;
+            color: white;
+        }
+        .vermas-btn {
+            background-color: #28a745;
+            padding: 6px 10px;
+            border-radius: 6px;
+        }
+        .vermas-btn:hover {
+            background-color: #1f7a34;
+        }
+
+        /* === MODAL === */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 999;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 20px;
+            border-radius: 8px;
+            width: 80%;
+            max-width: 800px;
+            box-shadow: 0px 0px 10px #333;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .close {
+            color: #333;
+            float: right;
+            font-size: 22px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close:hover {
+            color: red;
+        }
+        table.detalle {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        table.detalle th, table.detalle td {
+            border: 1px solid #ccc;
+            padding: 8px;
+        }
+        table.detalle th {
+            background-color: #007bff;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 Consulta de Equipos por OT</h1>
+
+    <form method="POST" action="/buscar">
+        <input type="number" name="ot" placeholder="Ingrese número de OT" required>
+        <button type="submit">Buscar</button>
+    </form>
+
+    {% if resultado %}
+        <p>{{ resultado }}</p>
+    {% endif %}
+
+    {% if resultados %}
+        <table>
+            <tr>
+                <th>Serial</th>
+                <th>SAP</th>
+                <th>Descripción</th>
+                <th>Tipo</th>
+                
+                <th>Estado</th>
+                
+                <th>Acción</th>
+            </tr>
+            {% for r in resultados %}
+            <tr>
+                <td>{{ r.serial }}</td>
+                <td>{{ r.SAP }}</td>
+                <td>{{ r.descrip }}</td>
+                <td>{{ r.tipo }}</td>
+                <!-- <td>{{ r.fecha }}</td> -->
+                <td>{{ r.estado }}</td>
+                <td><button class="vermas-btn" onclick='mostrarDetalle({{ r.detalle | tojson | safe }})'>Ver más</button></td>
+            </tr>
+            {% endfor %}
+        </table>
+    {% endif %}
+
+    <!-- 🪟 MODAL PARA DETALLE -->
+    <div id="detalleModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="cerrarModal()">&times;</span>
+            <h3>📋 Detalle del Último Movimiento</h3>
+            <div id="detalleInfo"></div>
+        </div>
+    </div>
+
+    {% if resultados %}
+    <script>
+        function mostrarDetalle(detalle) {
+            const modal = document.getElementById("detalleModal");
+            const info = document.getElementById("detalleInfo");
+
+            if (!detalle || detalle.length === 0) {
+                info.innerHTML = "<p>No hay información disponible.</p>";
+            } else {
+                // Ordenar del más reciente al más antiguo
+                const ordenados = detalle.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+                const ultimo = ordenados[0]; // Solo el más reciente
+
+                let tabla = `
+                    <table class="detalle">
+                        <thead>
+                            <tr>
+                                <th>Tipo</th>
+                                <th>Fecha</th>
+                                <th>SAP</th>
+                                <th>Descripción</th>
+                                <th>Cédula</th>
+                                <th>Técnico</th>
+                                <th>Observaciones</th>
+                                <th>Consecutivo Contratista</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>${ultimo.tipo || "N/A"}</td>
+                                <td>${ultimo.fecha || "N/A"}</td>
+                                <td>${ultimo.sap || "N/A"}</td>
+                                <td>${ultimo.descripcion || "N/A"}</td>
+                                <td>${ultimo.cedula || "N/A"}</td>
+                                <td>${ultimo.tecnico || "N/A"}</td>
+                                <td>${ultimo.observaciones || "N/A"}</td>
+                                <td>${ultimo.consecutivo_contratista || "N/A"}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                `;
+
+                info.innerHTML = tabla;
+            }
+
+            modal.style.display = "block";
+        }
+
+        function cerrarModal() {
+            document.getElementById("detalleModal").style.display = "none";
+        }
+
+        window.onclick = function(event) {
+            const modal = document.getElementById("detalleModal");
+            if (event.target === modal) {
+                cerrarModal();
+            }
+        }
+    </script>
+    {% endif %}
+</body>
+</html>
