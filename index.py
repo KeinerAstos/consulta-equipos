@@ -1,17 +1,23 @@
 from flask import Flask, render_template, request, jsonify
 import pandas as pd
+import os
 
+# === CONFIGURACIÓN DEL SERVIDOR ===
 app = Flask(__name__, template_folder='frontend')
 
-# Cargar los archivos una sola vez (al iniciar la aplicación)
-ruta = 'datos/SISTEM.xlsx'
+# === CARGAR ARCHIVOS DE EXCEL ===
+# Usamos rutas absolutas seguras (Render las necesita)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+ruta = os.path.join(BASE_DIR, 'datos', 'SISTEM.xlsx')
+
+# Leer las hojas del Excel
 doc_entregas = pd.read_excel(ruta, sheet_name='ENTREGAS')
 doc_devoluciones = pd.read_excel(ruta, sheet_name='DEVOLUCIONES')
 doc_salidas = pd.read_excel(ruta, sheet_name='SALIDAS')
 doc_entradas = pd.read_excel(ruta, sheet_name="ENTRADAS")
 doc_envios = pd.read_excel(ruta, sheet_name="ENVIOS")
 
-# Limpieza y conversión
+# === LIMPIEZA DE DATOS ===
 for df in [doc_entregas, doc_devoluciones, doc_salidas, doc_entradas]:
     if "Serial" in df.columns:
         df["Serial"] = df["Serial"].astype(str).str.strip()
@@ -23,11 +29,13 @@ for df in [doc_entregas, doc_devoluciones, doc_salidas, doc_entradas]:
             df[col] = pd.to_datetime(df[col], errors="coerce")
 
 
+# === RUTA PRINCIPAL ===
 @app.route('/')
 def index():
     return render_template('index.html')
 
 
+# === BÚSQUEDA DE OT ===
 @app.route('/buscar', methods=['POST'])
 def buscar():
     try:
@@ -48,15 +56,13 @@ def buscar():
     casca = 0
 
     for serial in variable:
-        print(f"\n📦 Procesando serial: {serial}")
-
         entrega = doc_entregas[doc_entregas["Serial"] == serial]
         devolucion = doc_devoluciones[doc_devoluciones["Serial"] == serial]
         salida = doc_salidas[doc_salidas["Serial"] == serial]
         entrada = doc_entradas[doc_entradas["Serial"] == serial]
 
         movimientos = []
-        keiner_pri = []  # guardará toda la info adicional
+        detalle_info = []
 
         for df, tipo, fecha_col, col_sap, col_descrip in [
             (entrega, "Entrega", "Fecha Sistema", "Codigo SAP", "Descripción SAP"),
@@ -69,10 +75,10 @@ def buscar():
                     fecha = fila.get(fecha_col)
                     sap = fila.get(col_sap)
                     descrip = fila.get(col_descrip)
+
                     if pd.notna(fecha):
                         movimientos.append((tipo, fecha, sap, descrip))
 
-                        # Información general del movimiento
                         detalle_item = {
                             "tipo": tipo,
                             "fecha": str(fecha),
@@ -84,20 +90,16 @@ def buscar():
                             "consecutivo": "N/A"
                         }
 
-                        # Si es una entrega, trae cédula, técnico y observaciones
                         if tipo == "Entrega":
                             detalle_item["cedula"] = fila.get("Cedula", "N/A")
                             detalle_item["tecnico"] = fila.get("Técnico", "N/A")
                             detalle_item["observaciones"] = fila.get("Observaciones", "N/A")
 
-                        # Si es una salida, trae observaciones y consecutivo contratista
                         if tipo == "Salida":
                             detalle_item["observaciones"] = fila.get("Observación", "N/A")
                             detalle_item["consecutivo"] = fila.get("Consecutivo Contratista", "N/A")
 
-                        keiner_pri.append(detalle_item)
-
-
+                        detalle_info.append(detalle_item)
 
         if not movimientos:
             resultados.append({
@@ -107,7 +109,7 @@ def buscar():
                 "estado": "⚠️ No hay registros",
                 "SAP": sap_envio[casca],
                 "descrip": descrip_envio[casca],
-                "detalle": []  # vacía para ver más
+                "detalle": []
             })
         else:
             movimientos_df = pd.DataFrame(movimientos, columns=["Tipo", "Fecha", "SAP", "descrip"])
@@ -120,6 +122,9 @@ def buscar():
             estado = "📦 ENTREGADO" if tipo == "Entrega" else \
                      "📦 SALIDA" if tipo == "Salida" else "🏠 DISPONIBLE"
 
+            # 🔹 Mostrar solo el último movimiento en detalle
+            ultimo_detalle = sorted(detalle_info, key=lambda x: x["fecha"], reverse=True)[:1]
+
             resultados.append({
                 "serial": serial,
                 "tipo": tipo,
@@ -127,7 +132,7 @@ def buscar():
                 "estado": estado,
                 "SAP": sap,
                 "descrip": descrip,
-                "detalle": keiner_pri  # para el botón "Ver más"
+                "detalle": ultimo_detalle
             })
 
         casca += 1
@@ -135,12 +140,6 @@ def buscar():
     return render_template('index.html', resultados=resultados)
 
 
-# Ruta para obtener detalles (AJAX)
-@app.route('/detalle/<serial>', methods=['GET'])
-def detalle(serial):
-    # Aquí podrías buscar en resultados globales, o en el Excel, si necesitas hacerlo dinámico
-    return jsonify({"mensaje": f"Detalles de {serial} (por implementar)"})
-
-
+# === EJECUCIÓN (para entorno local) ===
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=10000)
