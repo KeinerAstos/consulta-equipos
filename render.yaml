@@ -3,7 +3,7 @@ services:
     name: consulta-equipos
     env: python
     buildCommand: "pip install -r requirements.txt"
-    startCommand: "gunicorn app:app"
+    startCommand: "gunicorn index:app"
     plan: free
     envVars:
       - key: PYTHON_VERSION
