@@ -154,6 +154,16 @@
             width: auto;
             border-radius: 6px;
         }
+    .info-ot {
+        background-color: #1f1f1f;
+        border-left: 5px solid #4da8da;
+        padding: 10px 15px;
+        margin: 20px 0;
+        border-radius: 6px;
+        color: #e3e3e3;
+        font-size: 1em;
+    }
+
   </style>
 </head>
 <body>
@@ -177,6 +187,9 @@
     {% endif %}
 
     {% if resultados %}
+    <div class="info-ot">
+        <strong>OT consultada:</strong> {{ ot }}
+    </div>
         <table>
             <tr>
                 <th>Serial</th>
