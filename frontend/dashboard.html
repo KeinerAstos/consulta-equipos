@@ -1,0 +1,102 @@
+<!-- frontend/dashboard.html -->
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Panel de Control</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style_tablero.css') }}">
+    <link rel="stylesheet" href="static/css/dashboard.css">
+</head>
+
+<body>
+    <header>
+        <h2>Bienvenido, {{ nombre }}</h2>
+        <p>Tu rol es: <strong>{{ rol }}</strong></p>
+        <a href="/logout" class="btn">Cerrar sesión</a>
+    </header>
+
+
+    <h1>LISTA DE ASIGNACIÓN DE PRECONFIGURADORES</h1>
+    <h2>Registrar nuevo usuario</h2>
+    <form id="asignacionForm">
+        <h2>Asignación de Equipos</h2>
+
+        <input type="text" name="serial" placeholder="Serial del equipo" required>
+
+        <div class="input-contenedor">
+            <input type="text" id="nombre" name="nombre" placeholder="Nombre usuario" autocomplete="off" required>
+            <div id="sugerencias"></div>
+        </div>
+
+        <input type="text" id="cedula" name="cedula" placeholder="Cédula del usuario" readonly required>
+        <input type="date" name="fecha" required>
+        <button type="submit">Guardar</button>
+    </form>
+
+
+
+    <div id="mensaje"></div>
+
+    <script>
+        document.getElementById('asignacionForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const formData = new FormData(e.target);
+            const response = await fetch('/insertar_asignacion', { method: 'POST', body: formData });
+            const result = await response.json();
+
+            const mensajeDiv = document.getElementById('mensaje');
+            mensajeDiv.textContent = result.message;
+            mensajeDiv.style.color = result.status === 'ok' ? 'green' : 'red';
+        });
+
+        const inputNombre = document.getElementById("nombre");
+        const sugerenciasDiv = document.getElementById("sugerencias");
+        const inputCedula = document.getElementById("cedula");
+
+        inputNombre.addEventListener("input", async () => {
+            const texto = inputNombre.value.trim();
+
+            if (texto.length < 2) {
+                sugerenciasDiv.style.display = "none";
+                return;
+            }
+
+            const response = await fetch(`/buscar_usuarios?nombre=${encodeURIComponent(texto)}`);
+            const usuarios = await response.json();
+
+            sugerenciasDiv.innerHTML = "";
+            if (usuarios.length > 0) {
+                sugerenciasDiv.style.display = "block";
+                usuarios.forEach(u => {
+                    const opcion = document.createElement("div");
+                    opcion.textContent = u.nombre;
+                    opcion.style.padding = "8px";
+                    opcion.style.cursor = "pointer";
+                    opcion.addEventListener("click", () => {
+                        inputNombre.value = u.nombre;
+                        inputCedula.value = u.cedula;
+                        sugerenciasDiv.style.display = "none";
+                    });
+                    opcion.addEventListener("mouseover", () => opcion.style.background = "#00c3ff");
+                    opcion.addEventListener("mouseout", () => opcion.style.background = "transparent");
+                    sugerenciasDiv.appendChild(opcion);
+                });
+            } else {
+                sugerenciasDiv.style.display = "none";
+            }
+        });
+
+        // Oculta sugerencias al hacer clic fuera
+        document.addEventListener("click", (e) => {
+            if (!sugerenciasDiv.contains(e.target) && e.target !== inputNombre) {
+                sugerenciasDiv.style.display = "none";
+            }
+        });
+    </script>
+
+
+</body>
+
+</html>

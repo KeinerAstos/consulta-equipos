@@ -1,0 +1,198 @@
+/* === FORMULARIO GENERAL === */
+#asignacionForm {
+  background: #1f1f1f;
+  color: #fff;
+  width: 400px; /* un poco más ancho */
+  margin: 80px auto;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+#asignacionForm h2 {
+  margin-bottom: 20px;
+  text-align: center;
+  color: #00c3ff;
+}
+
+/* === INPUTS GENERALES === */
+#asignacionForm input[type="text"],
+#asignacionForm input[type="date"],
+#asignacionForm .input-contenedor {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+#asignacionForm input[type="text"],
+#asignacionForm input[type="date"] {
+  padding: 12px;
+  margin-bottom: 15px;
+  border: none;
+  border-radius: 6px;
+  background: #2e2e2e;
+  color: #fff;
+  font-size: 15px;
+  outline: none;
+  transition: border 0.2s, box-shadow 0.2s;
+}
+
+#asignacionForm input:focus {
+  border: 1px solid #00c3ff;
+  box-shadow: 0 0 6px #00c3ff;
+}
+
+/* === INPUT CONTENEDOR (para nombre + sugerencias) === */
+.input-contenedor {
+  position: relative;
+  margin-bottom: 15px;
+}
+
+#nombre {
+  width: 100%;
+}
+
+/* === SUGERENCIAS === */
+#sugerencias {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  background: #2a2a2a;
+  color: #fff;
+  border-radius: 6px;
+  display: none;
+  z-index: 1000;
+  overflow: hidden;
+  border: 1px solid #3a3a3a;
+}
+
+#sugerencias div {
+  padding: 8px 10px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+#sugerencias div:hover {
+  background: #00c3ff;
+}
+
+/* === BOTÓN === */
+#asignacionForm button {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 6px;
+  background: #00c3ff;
+  color: #fff;
+  font-weight: bold;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background 0.3s, transform 0.2s;
+}
+
+#asignacionForm button:hover {
+  background: #009edc;
+  transform: scale(1.03);
+}
+/* === FORMULARIO GENERAL === */
+#asignacionForm {
+  background: #1f1f1f;
+  color: #fff;
+  width: 400px; /* un poco más ancho */
+  margin: 80px auto;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+#asignacionForm h2 {
+  margin-bottom: 20px;
+  text-align: center;
+  color: #00c3ff;
+}
+
+/* === INPUTS GENERALES === */
+#asignacionForm input[type="text"],
+#asignacionForm input[type="date"],
+#asignacionForm .input-contenedor {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+#asignacionForm input[type="text"],
+#asignacionForm input[type="date"] {
+  padding: 12px;
+  margin-bottom: 15px;
+  border: none;
+  border-radius: 6px;
+  background: #2e2e2e;
+  color: #fff;
+  font-size: 15px;
+  outline: none;
+  transition: border 0.2s, box-shadow 0.2s;
+}
+
+#asignacionForm input:focus {
+  border: 1px solid #00c3ff;
+  box-shadow: 0 0 6px #00c3ff;
+}
+
+/* === INPUT CONTENEDOR (para nombre + sugerencias) === */
+.input-contenedor {
+  position: relative;
+  margin-bottom: 15px;
+}
+
+#nombre {
+  width: 100%;
+}
+
+/* === SUGERENCIAS === */
+#sugerencias {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  background: #2a2a2a;
+  color: #fff;
+  border-radius: 6px;
+  display: none;
+  z-index: 1000;
+  overflow: hidden;
+  border: 1px solid #3a3a3a;
+}
+
+#sugerencias div {
+  padding: 8px 10px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+#sugerencias div:hover {
+  background: #00c3ff;
+}
+
+/* === BOTÓN === */
+#asignacionForm button {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 6px;
+  background: #00c3ff;
+  color: #fff;
+  font-weight: bold;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background 0.3s, transform 0.2s;
+}
+
+#asignacionForm button:hover {
+  background: #009edc;
+  transform: scale(1.03);
+}

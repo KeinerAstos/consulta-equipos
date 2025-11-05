@@ -1,0 +1,244 @@
+body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #2e2e2e;
+      /* Gris oscuro */
+      color: #e5e5e5;
+      /* Texto claro */
+      margin: 0;
+      padding: 40px;
+    }
+
+.logo img {
+      height: 45px;
+      width: auto;
+      border-radius: 6px;
+    }
+.btn {
+      display: inline-block;
+      background-color: #545f64;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 8px;
+      text-decoration: none;
+      border: none;
+    }
+
+.btn:hover {
+    background-color: #61a5c2;
+}
+
+
+/* === HEADER GENERAL === */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #1e1e1e;
+  padding: 15px 40px;
+  border-radius: 10px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4);
+  flex-wrap: wrap;
+}
+
+/* === LOGO === */
+.logo img {
+  height: 45px;
+  border-radius: 6px;
+  box-shadow: 0 0 5px rgba(255, 255, 255, 0.1);
+}
+
+/* === BOTONES === */
+#inicio, #tablero {
+  margin: 0 10px;
+}
+
+.btn {
+  background-color: #3b4a51;
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.btn:hover {
+  background-color: #5a6a72;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 5px rgba(255, 255, 255, 0.15);
+}
+
+/* === CONTENEDOR CENTRAL (BOTONES) === */
+header div#inicio, 
+header div#tablero {
+  display: inline-block;
+}
+
+/* === FECHA === */
+.fecha {
+  color: #c7c7c7;
+  font-size: 0.9rem;
+}
+
+/* === DISTRIBUCIÓN FLEXIBLE === */
+header {
+  gap: 20px;
+}
+
+header .logo {
+  flex: 1;
+}
+
+header #inicio, 
+header #tablero {
+  flex: 0;
+}
+
+header .fecha {
+  flex: 1;
+  text-align: right;
+}
+
+/* === RESPONSIVE === */
+@media (max-width: 700px) {
+  header {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .fecha {
+    text-align: center;
+    margin-top: 10px;
+  }
+}
+
+
+
+/* === SECCIÓN TABLERO === */
+main {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 60px 20px;
+}
+
+.tablero {
+  background-color: #1e1e1e;
+  border-radius: 16px;
+  padding: 40px;
+  width: 90%;
+  max-width: 600px;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+  text-align: center;
+  margin-top: 40px;
+}
+
+/* === NOMBRE DEL USUARIO === */
+.tablero h1 {
+  color: #4fc3f7;
+  font-size: 2rem;
+  margin-bottom: 10px;
+}
+
+/* === TÍTULO SECUNDARIO === */
+.tablero h3 {
+  color: #ccc;
+  font-weight: 400;
+  margin-bottom: 25px;
+}
+
+/* === LISTA DE SERIALES === */
+.serial-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.serial-list li {
+  background-color: #2c2c2c;
+  margin-bottom: 10px;
+  padding: 12px;
+  border-radius: 10px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+}
+
+.serial-list li:hover {
+  background-color: #3a3a3a;
+  transform: scale(1.02);
+}
+
+/* === MENSAJE SIN DATOS === */
+.no-data {
+  color: #a0a0a0;
+  font-style: italic;
+  font-size: 1rem;
+  margin-top: 10px;
+}
+
+
+main {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+    background-color: #2e2e2e;
+}
+
+section.tablero {
+    background: #1b1b1b;
+    border-radius: 15px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    padding: 25px;
+}
+
+section.tablero h1 {
+    color: #ffffff;
+    font-size: 1.5em;
+    margin-bottom: 10px;
+}
+
+section.tablero h3 {
+    color: #fff;
+    font-size: 1.1em;
+    margin-bottom: 15px;
+}
+
+.table-container {
+    overflow-x: auto;
+}
+
+.equipos-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.equipos-table th {
+    background-color: #2d89ef;
+    color: white;
+    padding: 10px;
+    text-align: left;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.9em;
+}
+
+.equipos-table td {
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+    color: #fff;
+    font-size: 0.95em;
+}
+
+.equipos-table tr:hover {
+    background-color: #f1f7ff;
+}
+
+.no-data {
+    color: #777;
+    font-style: italic;
+    padding: 10px 0;
+}
