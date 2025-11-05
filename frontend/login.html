@@ -12,24 +12,24 @@
 </head>
 
 <body id="login">
-  
 
-  <div class="login-container">
-    <div class="logo-form">
-      <img src="{{ url_for('static', filename='Rake.jpg') }}" alt="Logo">
-      <p>X</p>
-      <img src="{{ url_for('static', filename='postivos.jpg') }}" alt="Logo">
+
+    <div class="login-container">
+        <div class="logo-form">
+            <img src="{{ url_for('static', filename='Rake.jpg') }}" alt="Logo">
+            <p>X</p>
+            <img src="{{ url_for('static', filename='postivos.jpg') }}" alt="Logo">
+        </div>
+        <form method="POST">
+            <h3>Iniciar Sesión</h3>
+            <input type="text" name="correo" placeholder="Correo">
+            <input type="password" name="contrasena" placeholder="Contraseña">
+            <button type="submit">Ingresar</button>
+            {% if error %}
+            <p class="error">{{ error }}</p>
+            {% endif %}
+        </form>
     </div>
-    <form method="POST">
-      <h3>Iniciar Sesión</h3>
-      <input type="text" name="usuario" placeholder="Usuario">
-      <input type="password" name="contrasena" placeholder="Contraseña">
-      <button type="submit">Ingresar</button>
-      {% if error %}
-      <p class="error">{{ error }}</p>
-      {% endif %}
-    </form>
-  </div>
 </body>
 
 
