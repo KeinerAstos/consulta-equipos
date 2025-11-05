@@ -5,7 +5,6 @@
 <head>
     <meta charset="UTF-8">
     <title>Panel de Control</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style_tablero.css') }}">
     <link rel="stylesheet" href="static/css/dashboard.css">
 </head>
 
@@ -19,26 +18,93 @@
 
     <h1>LISTA DE ASIGNACIÓN DE PRECONFIGURADORES</h1>
     <h2>Registrar nuevo usuario</h2>
+
     <form id="asignacionForm">
         <h2>Asignación de Equipos</h2>
 
-        <input type="text" name="serial" placeholder="Serial del equipo" required>
+        <!-- Campo para buscar serial -->
+        <div class="input-contenedor">
+            <input type="text" id="serial" name="serial" placeholder="Serial del equipo" autocomplete="off" required>
+            <div id="sugerenciasSerial" class="sugerencias"></div>
+        </div>
 
+        <!-- Campos que se llenarán automáticamente -->
+        <input type="text" id="sap" name="sap" placeholder="Código SAP" readonly>
+        <input type="text" id="descripcion" name="descripcion" placeholder="Descripción del equipo" readonly>
+
+        <!-- Campo para buscar nombre -->
         <div class="input-contenedor">
             <input type="text" id="nombre" name="nombre" placeholder="Nombre usuario" autocomplete="off" required>
-            <div id="sugerencias"></div>
+            <div id="sugerenciasNombre" class="sugerencias"></div>
         </div>
 
         <input type="text" id="cedula" name="cedula" placeholder="Cédula del usuario" readonly required>
-        <input type="date" name="fecha" required>
+        <input type="date" id="fecha" name="fecha" readonly required>
+
         <button type="submit">Guardar</button>
     </form>
 
-
-
     <div id="mensaje"></div>
 
+
+
+    <main>
+        <section class="tablero">
+            <h2>Equipos Asignados</h2>
+            <div class="table-container">
+                <table class="equipos-table">
+                    <thead>
+                        <tr>
+                            <th>SAP</th>
+                            <th>Descripción</th>
+                            <th>Serial</th>
+                            <th>Usuario</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for usuario, equipos in data.items() %}
+                        {% for e in equipos %}
+                        <tr>
+                            <td>{{ e.sap }}</td>
+                            <td>{{ e.descripcion }}</td>
+                            <td>{{ e.serial }}</td>
+                            <td>{{ e.nombre }}</td>
+                            <td>
+                                <button class="btn-verde"
+                                    onclick="eliminarAsignacion('{{ e.serial }}')">Liberar</button>
+
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+
+
     <script>
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const fechaInput = document.getElementById("fecha");
+            const form = document.getElementById("asignacionForm");
+
+            // 🔹 Establecer la fecha actual automáticamente al cargar la página
+            const ahora = new Date();
+            const año = ahora.getFullYear();
+            const mes = String(ahora.getMonth() + 1).padStart(2, '0');
+            const dia = String(ahora.getDate()).padStart(2, '0');
+            const fechaHoy = `${año}-${mes}-${dia}`;
+            fechaInput.value = fechaHoy;
+
+            // 🔹 Reforzar la fecha actual antes del envío (por si la sesión dura mucho)
+            form.addEventListener("submit", () => {
+                fechaInput.value = new Date().toISOString().split('T')[0];
+            });
+        });
         document.getElementById('asignacionForm').addEventListener('submit', async (e) => {
             e.preventDefault();
 
@@ -50,52 +116,111 @@
             mensajeDiv.textContent = result.message;
             mensajeDiv.style.color = result.status === 'ok' ? 'green' : 'red';
         });
+        async function eliminarAsignacion(serial) {
+            if (!confirm(`¿Seguro que deseas eliminar el equipo con serial ${serial}?`)) return;
+            const response = await fetch(`/eliminar_asignacion/${serial}`, { method: 'DELETE' });
+            const result = await response.json();
+            alert(result.message);
+            if (result.status === 'ok') location.reload();
+        }
+
+        // === ELEMENTOS ===
+        const inputSerial = document.getElementById("serial");
+        const sugerenciasSerial = document.getElementById("sugerenciasSerial");
+        const inputSAP = document.getElementById("sap");
+        const inputDescripcion = document.getElementById("descripcion");
 
         const inputNombre = document.getElementById("nombre");
-        const sugerenciasDiv = document.getElementById("sugerencias");
+        const sugerenciasNombre = document.getElementById("sugerenciasNombre");
         const inputCedula = document.getElementById("cedula");
 
+        // === BUSCAR SERIAL ===
+        inputSerial.addEventListener("input", async () => {
+            const texto = inputSerial.value.trim();
+
+            if (texto.length < 2) {
+                sugerenciasSerial.style.display = "none";
+                return;
+            }
+
+            const response = await fetch(`/buscar_serial?serial=${encodeURIComponent(texto)}`);
+            const data = await response.json();
+
+            sugerenciasSerial.innerHTML = "";
+
+            if (data.length > 0) {
+                sugerenciasSerial.style.display = "block";
+                data.forEach(item => {
+                    const opcion = document.createElement("div");
+                    opcion.textContent = `${item.serial} - ${item.sap} - ${item.descripcion}`;
+                    opcion.style.padding = "8px";
+                    opcion.style.cursor = "pointer";
+
+                    opcion.addEventListener("click", () => {
+                        inputSerial.value = item.serial;
+                        inputSAP.value = item.sap;
+                        inputDescripcion.value = item.descripcion;
+                        sugerenciasSerial.style.display = "none";
+                    });
+
+                    opcion.addEventListener("mouseover", () => opcion.style.background = "#00c3ff20");
+                    opcion.addEventListener("mouseout", () => opcion.style.background = "transparent");
+
+                    sugerenciasSerial.appendChild(opcion);
+                });
+            } else {
+                sugerenciasSerial.style.display = "none";
+            }
+        });
+
+        // === BUSCAR NOMBRE ===
         inputNombre.addEventListener("input", async () => {
             const texto = inputNombre.value.trim();
 
             if (texto.length < 2) {
-                sugerenciasDiv.style.display = "none";
+                sugerenciasNombre.style.display = "none";
                 return;
             }
 
             const response = await fetch(`/buscar_usuarios?nombre=${encodeURIComponent(texto)}`);
-            const usuarios = await response.json();
+            const data = await response.json();
 
-            sugerenciasDiv.innerHTML = "";
-            if (usuarios.length > 0) {
-                sugerenciasDiv.style.display = "block";
-                usuarios.forEach(u => {
+            sugerenciasNombre.innerHTML = "";
+
+            if (data.length > 0) {
+                sugerenciasNombre.style.display = "block";
+                data.forEach(item => {
                     const opcion = document.createElement("div");
-                    opcion.textContent = u.nombre;
+                    opcion.textContent = item.nombre;
                     opcion.style.padding = "8px";
                     opcion.style.cursor = "pointer";
+
                     opcion.addEventListener("click", () => {
-                        inputNombre.value = u.nombre;
-                        inputCedula.value = u.cedula;
-                        sugerenciasDiv.style.display = "none";
+                        inputNombre.value = item.nombre;
+                        inputCedula.value = item.cedula;
+                        sugerenciasNombre.style.display = "none";
                     });
-                    opcion.addEventListener("mouseover", () => opcion.style.background = "#00c3ff");
+
+                    opcion.addEventListener("mouseover", () => opcion.style.background = "#00c3ff20");
                     opcion.addEventListener("mouseout", () => opcion.style.background = "transparent");
-                    sugerenciasDiv.appendChild(opcion);
+
+                    sugerenciasNombre.appendChild(opcion);
                 });
             } else {
-                sugerenciasDiv.style.display = "none";
+                sugerenciasNombre.style.display = "none";
             }
         });
 
-        // Oculta sugerencias al hacer clic fuera
+        // === CERRAR SUGERENCIAS ===
         document.addEventListener("click", (e) => {
-            if (!sugerenciasDiv.contains(e.target) && e.target !== inputNombre) {
-                sugerenciasDiv.style.display = "none";
+            if (!sugerenciasSerial.contains(e.target) && e.target !== inputSerial) {
+                sugerenciasSerial.style.display = "none";
+            }
+            if (!sugerenciasNombre.contains(e.target) && e.target !== inputNombre) {
+                sugerenciasNombre.style.display = "none";
             }
         });
     </script>
-
 
 </body>
 

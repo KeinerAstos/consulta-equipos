@@ -1,3 +1,129 @@
+body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #2e2e2e;
+      /* Gris oscuro */
+      color: #e5e5e5;
+      /* Texto claro */
+      margin: 0;
+      padding: 40px;
+    }
+
+.logo img {
+      height: 45px;
+      width: auto;
+      border-radius: 6px;
+    }
+.btn {
+      display: inline-block;
+      background-color: #545f64;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 8px;
+      text-decoration: none;
+      border: none;
+    }
+
+.btn:hover {
+    background-color: #61a5c2;
+}
+
+
+/* === HEADER GENERAL === */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #1e1e1e;
+  padding: 15px 40px;
+  border-radius: 10px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4);
+  flex-wrap: wrap;
+}
+
+/* === LOGO === */
+.logo img {
+  height: 45px;
+  border-radius: 6px;
+  box-shadow: 0 0 5px rgba(255, 255, 255, 0.1);
+}
+
+/* === BOTONES === */
+#inicio, #tablero {
+  margin: 0 10px;
+}
+
+.btn {
+  background-color: #3b4a51;
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.btn:hover {
+  background-color: #5a6a72;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 5px rgba(255, 255, 255, 0.15);
+}
+
+/* === CONTENEDOR CENTRAL (BOTONES) === */
+header div#inicio, 
+header div#tablero {
+  display: inline-block;
+}
+
+/* === FECHA === */
+.fecha {
+  color: #c7c7c7;
+  font-size: 0.9rem;
+}
+
+/* === DISTRIBUCIÓN FLEXIBLE === */
+header {
+  gap: 20px;
+}
+
+header .logo {
+  flex: 1;
+}
+
+header #inicio, 
+header #tablero {
+  flex: 0;
+}
+
+header .fecha {
+  flex: 1;
+  text-align: right;
+}
+
+/* === RESPONSIVE === */
+@media (max-width: 700px) {
+  header {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .fecha {
+    text-align: center;
+    margin-top: 10px;
+  }
+}
+main {
+    padding: 20px;
+    display: flex;
+    flex-wrap: wrap; /* 🔹 permite varias filas si se llena */
+    justify-content: center; /* 🔹 centra horizontalmente */
+    align-items: flex-start;
+    gap: 20px;
+    background-color: #2e2e2e;
+}
+
+
+
 /* === FORMULARIO GENERAL === */
 #asignacionForm {
   background: #1f1f1f;
@@ -195,4 +321,51 @@
 #asignacionForm button:hover {
   background: #009edc;
   transform: scale(1.03);
+}
+
+
+.table-container {
+    overflow-x: auto;
+}
+
+.equipos-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.equipos-table th {
+    background-color: #2d89ef;
+    color: white;
+    padding: 10px;
+    text-align: left;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.9em;
+}
+
+.equipos-table td {
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+    color: #fff;
+    font-size: 0.95em;
+}
+
+.equipos-table tr:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.btn-verde {
+    background-color: #1fdb38;
+    color: rgb(19, 19, 19);
+    border: none;
+    padding: 6px 12px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background 0.3s ease;
+}
+
+.btn-verde:hover {
+    background-color: #c9302c;
 }

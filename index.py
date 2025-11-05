@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, jsonify, redirect, url_for, s
 import pandas as pd
 import os
 import psycopg2
+from collections import defaultdict
 from psycopg2 import errors
 
 # === CONFIGURACIÓN GENERAL ===
@@ -94,6 +95,28 @@ def buscar_usuarios():
     usuarios = [{'nombre': r[0], 'cedula': r[1]} for r in resultados]
     return jsonify(usuarios)
 
+# Buscar equipos por serial
+@app.route('/buscar_serial', methods=['GET'])
+def buscar_serial():
+    texto = request.args.get('serial', '').strip().lower()
+    if not texto:
+        return jsonify([])
+
+    # Filtrar desde el Excel cargado
+    resultados = doc_stock[
+        doc_stock['Serial'].astype(str).str.lower().str.contains(texto)
+    ].head(10)
+
+    data = []
+    for _, row in resultados.iterrows():
+        data.append({
+            "serial": str(row["Serial"]),
+            "descripcion": str(row.get("Descripción", "Sin descripción")),
+            "sap": str(row.get("Codigo SAP", "Sin SAP"))
+        })
+
+    return jsonify(data)
+
 
 
 # === LOGIN ===
@@ -130,12 +153,101 @@ def logout():
 # === DASHBOARD ===
 @app.route('/dashboard')
 def dashboard():
+    # Verificar sesión
     if 'usuario_id' not in session:
         return redirect(url_for('login'))
+    
+    conn = get_connection()
+    cur = conn.cursor()
 
-    return render_template('dashboard.html', 
-                           nombre=session['usuario_nombre'], 
-                           rol=session['usuario_rol'])
+    # Consulta: obtener equipos asignados por usuario
+    cur.execute("""
+        SELECT 
+            u.nombre AS nombre, 
+            a.serial_f AS serial, 
+            e.sap AS sap, 
+            e.descripcion AS descripcion
+        FROM asignacion a
+        JOIN usuario u ON a.cedula_f = u.cedula
+        JOIN equipo e ON e.serial = a.serial_f
+        ORDER BY u.nombre;
+    """)
+    
+    resultados = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    # Agrupar equipos por usuario
+    data = defaultdict(list)
+    for nombre, serial, sap, descripcion in resultados:
+        if serial:
+            data[nombre].append({
+                'nombre': nombre,
+                'serial': serial,
+                'sap': sap,
+                'descripcion': descripcion
+            })
+
+    # Enviar datos al template
+    return render_template(
+        'dashboard.html',
+        nombre=session.get('usuario_nombre', 'Invitado'),
+        rol=session.get('usuario_rol', 'Sin rol'),
+        data=data
+    )
+
+@app.route('/eliminar_asignacion/<serial>', methods=['DELETE'])
+def eliminar_asignacion(serial):
+    """
+    Mueve una asignación de 'asignacion' a 'historial_movimiento' 
+    registrando quién la eliminó y la fecha exacta.
+    """
+    try:
+        # Verificar sesión activa
+        if 'usuario_nombre' not in session:
+            return jsonify({'status': 'error', 'message': 'Sesión expirada. Inicie sesión nuevamente.'}), 401
+
+        usuario_actual = session['usuario_nombre']
+
+        conn = get_connection()
+        cur = conn.cursor()
+
+        # Buscar la asignación
+        cur.execute("""
+            SELECT a.serial_f, a.cedula_f, u.nombre, e.sap, e.descripcion
+            FROM asignacion a
+            JOIN usuario u ON a.cedula_f = u.cedula
+            JOIN equipo e ON e.serial = a.serial_f
+            WHERE a.serial_f = %s;
+        """, (serial,))
+        asignacion = cur.fetchone()
+
+        if not asignacion:
+            cur.close()
+            conn.close()
+            return jsonify({'status': 'error', 'message': f'El serial {serial} no está asignado.'}), 404
+
+        serial_f, cedula_f, nombre_usuario, sap, descripcion = asignacion
+
+        # Insertar en historial_movimiento
+        cur.execute("""
+            INSERT INTO historial_movimiento (serial, cedula_usuario, nombre_usuario, sap, descripcion, movimiento_realizado_por, fecha_movimiento)
+            VALUES (%s, %s, %s, %s, %s, %s, NOW());
+        """, (serial_f, cedula_f, nombre_usuario, sap, descripcion, usuario_actual))
+
+        # Eliminar de asignacion
+        cur.execute("DELETE FROM asignacion WHERE serial_f = %s;", (serial_f,))
+        conn.commit()
+
+        cur.close()
+        conn.close()
+
+        return jsonify({'status': 'ok', 'message': f'Asignación del equipo {serial} movida al historial correctamente.'})
+
+    except Exception as e:
+        print("❌ Error al mover asignación al historial:", e)
+        return jsonify({'status': 'error', 'message': 'Error al registrar el movimiento.'}), 500
 
 
 @app.route('/insertar_asignacion', methods=['POST'])
