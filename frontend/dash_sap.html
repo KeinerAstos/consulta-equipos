@@ -14,21 +14,19 @@
       <img src="{{ url_for('static', filename='Rake.jpg') }}" alt="Logo Rake">
     </div>
     <div id="inicio">
-      <a href="/" class="btn">Inicio</a>
+      <a href="/dash_sap" class="btn">Inicio</a>
     </div>
     <div id="tablero">
-      <a href="/table" class="btn">Tablero</a>
+      <a href="/dash_table" class="btn">Tablero</a>
     </div>
-    <div id="login">
-      <a href="/login" class="btn">Login</a>
+    <div id="dashboard">
+      <a href="/dashboard" class="btn">Dashboard</a>
     </div>
-    <div class="fecha">
-      Última actualización: 3:30 PM - 06/11/2025
-    </div>
+    <a href="/logout" class="btn">Cerrar sesión</a>
   </header>
-  <h1>🔍 Consulta de Equipos por OT</h1>
+  <h1>🔍 Consulta de Equipos por OTP</h1>
 
-  <form method="POST" action="/buscar">
+  <form method="POST" action="/buscar1">
     <input type="number" name="ot" placeholder="Ingrese número de OT" required>
     <button type="submit">Buscar</button>
   </form>

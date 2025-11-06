@@ -9,8 +9,27 @@
 </head>
 
 <body>
+    <style>
+        .mensaje-estado {
+            text-align: center;
+            margin-top: 10px;
+            font-weight: 600;
+            transition: opacity 0.6s ease;
+            opacity: 0;
+            padding: 10px;
+            background-color: aliceblue;
+            border-radius: 10px;
+        }
+    </style>
+
     <header>
         <h2>Bienvenido, {{ nombre }}</h2>
+        <div id="inicio">
+            <a href="/dash_sap" class="btn">Inicio</a>
+        </div>
+        <div id="tablero">
+            <a href="/dash_table" class="btn">Tablero</a>
+        </div>
         <p>Tu rol es: <strong>{{ rol }}</strong></p>
         <a href="/logout" class="btn">Cerrar sesión</a>
     </header>
@@ -42,9 +61,8 @@
         <input type="date" id="fecha" name="fecha" readonly required>
 
         <button type="submit">Guardar</button>
+        <div id="mensaje" class="mensaje-estado"></div>
     </form>
-
-    <div id="mensaje"></div>
 
 
 
@@ -114,7 +132,13 @@
 
             const mensajeDiv = document.getElementById('mensaje');
             mensajeDiv.textContent = result.message;
-            mensajeDiv.style.color = result.status === 'ok' ? 'green' : 'red';
+            mensajeDiv.style.color = result.status === 'ok' ? '#0f9d58' : '#d93025';
+            mensajeDiv.style.opacity = '1';
+
+            // ✅ Animación de desaparición después de 3 segundos
+            setTimeout(() => {
+                mensajeDiv.style.opacity = '0';
+            }, 3000);
         });
         async function eliminarAsignacion(serial) {
             if (!confirm(`¿Seguro que deseas eliminar el equipo con serial ${serial}?`)) return;

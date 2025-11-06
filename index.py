@@ -41,14 +41,10 @@ for df in [doc_entregas, doc_devoluciones, doc_salidas, doc_entradas]:
     for col in df.columns:
         if "Fecha" in col or "fecha" in col:
             df[col] = pd.to_datetime(df[col], errors="coerce")
-
-
-@app.route('/table')
-def tabla_usuario():
+# === FUNCIÓN AUXILIAR PARA CONSULTAR DATOS ===
+def obtener_asignaciones():
     conn = get_connection()
     cur = conn.cursor()
-
-    # Consulta: obtener usuarios y sus seriales asignados
     cur.execute("""
         SELECT u.nombre as nombre, a.serial_f as serial, e.sap as sap, e.descripcion as descripcion
         FROM asignacion a
@@ -57,21 +53,32 @@ def tabla_usuario():
         ORDER BY u.nombre;
     """)
     resultados = cur.fetchall()
-
     cur.close()
     conn.close()
-
-    # Agrupar seriales por usuario
     data = {}
     for nombre, serial, sap, descripcion in resultados:
         if nombre not in data:
             data[nombre] = []
-        if serial is not None:
-            data[nombre].append({'serial': serial, 'sap': sap, 'descripcion': descripcion})
+        if serial:
+            data[nombre].append({
+                'serial': serial,
+                'sap': sap,
+                'descripcion': descripcion
+            })
+    return data
 
-    # Pasamos la estructura al template
+
+# === RUTAS REUTILIZANDO LA FUNCIÓN ===
+@app.route('/dash_table')
+def dash_table():
+    data = obtener_asignaciones()
+    return render_template('dash_table.html', data=data)
+
+
+@app.route('/table')
+def tabla_usuario():
+    data = obtener_asignaciones()
     return render_template('table.html', data=data)
-
 
 @app.route('/buscar_usuarios', methods=['GET'])
 def buscar_usuarios():
@@ -299,6 +306,10 @@ def insertar_asignacion():
     else:
         return jsonify({'status': 'error', 'message': '⚠️ El serial no existe en siscos.'}), 400
 
+@app.route('/dash_sap')
+def dash_sap():
+    return render_template('dash_sap.html')
+
 
 # === RUTA PRINCIPAL ===
 @app.route('/')
@@ -306,17 +317,11 @@ def index():
     return render_template('index.html')
 
 
-# === BÚSQUEDA DE OT ===
-@app.route('/buscar', methods=['POST'])
-def buscar():
-    try:
-        OT = int(request.form['ot'])
-    except:
-        return render_template('index.html', resultado="⚠️ Ingresa un número de OT válido")
-
+def buscar_ot_data(OT):
+    """Devuelve los resultados de la búsqueda de una OT."""
     entrega_envio = doc_envios[doc_envios["OTP"] == OT]
     if entrega_envio.empty:
-        return render_template('index.html', resultado=f"⚠️ No se encontraron registros con OT {OT}")
+        return {"resultado": f"⚠️ No se encontraron registros con OT {OT}", "resultados": []}
 
     variable = entrega_envio['NºSerieFab'].tolist()
     sap_envio = entrega_envio["Material"].tolist()
@@ -407,8 +412,29 @@ def buscar():
             })
 
         casca += 1
+        return {"resultado": None, "resultados": resultados}
 
-    return render_template('index.html', resultados=resultados)
+
+@app.route('/buscar', methods=['POST'])
+def buscar_ot():
+    try:
+        OT = int(request.form['ot'])
+    except:
+        return render_template('index.html', resultado="⚠️ Ingresa un número de OT válido")
+
+    data = buscar_ot_data(OT)
+    return render_template('index.html', **data)
+
+
+@app.route('/buscar1', methods=['POST'])
+def buscar_ot1():
+    try:
+        OT = int(request.form['ot'])
+    except:
+        return render_template('dash_sap.html', resultado="⚠️ Ingresa un número de OT válido")
+
+    data = buscar_ot_data(OT)
+    return render_template('dash_sap.html', **data)
 
 
 # === EJECUCIÓN (para entorno local) ===
