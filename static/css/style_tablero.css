@@ -191,3 +191,104 @@ section.tablero h3 {
     padding: 10px 0;
     text-align: center;
 }
+
+
+/* === HEADER BASE === */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #0d1117;
+  padding: 10px 40px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
+  border-radius: 12px;
+  margin: 20px;
+  color: #d1d5db;
+}
+
+/* === LOGO === */
+.logo {
+  height: 45px;
+  filter: drop-shadow(0 0 5px rgba(100, 149, 237, 0.4));
+}
+
+/* === NAVEGACIÓN === */
+.nav {
+  display: flex;
+  gap: 30px;
+}
+
+.nav-link {
+  color: #d1d5db;
+  text-decoration: none;
+  font-weight: 500;
+  position: relative;
+  transition: color 0.3s ease;
+}
+
+.nav-link::after {
+  content: "";
+  position: absolute;
+  bottom: -5px;
+  left: 0;
+  width: 0%;
+  height: 2px;
+  background-color: #3b82f6;
+  transition: width 0.3s ease;
+}
+
+.nav-link:hover {
+  color: #60a5fa;
+}
+
+.nav-link:hover::after {
+  width: 100%;
+}
+
+/* === LOGIN ICON === */
+.login-icon {
+  color: #93c5fd;
+  font-size: 1.8rem;
+  margin-right: 15px;
+  transition: all 0.3s ease;
+}
+
+.login-icon:hover {
+  color: #60a5fa;
+  transform: scale(1.1);
+}
+
+/* === FECHA === */
+.fecha {
+  font-size: 0.85rem;
+  color: #9ca3af;
+}
+
+/* === CONTENEDOR DERECHA === */
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* === RESPONSIVE === */
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    text-align: center;
+    padding: 15px;
+  }
+
+  .nav {
+    margin: 10px 0;
+  }
+
+  .header-right {
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .fecha {
+    font-size: 0.8rem;
+  }
+}
