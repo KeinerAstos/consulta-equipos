@@ -412,8 +412,9 @@ def buscar_ot_data(OT):
             })
 
         casca += 1
-        return {"resultado": None, "resultados": resultados}
 
+    # 🔹 Mover el return FUERA del for
+    return {"resultado": None, "resultados": resultados}
 
 @app.route('/buscar', methods=['POST'])
 def buscar_ot():
