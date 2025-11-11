@@ -311,7 +311,7 @@ def dash_sap():
     return render_template('dash_sap.html')
 
 
-# === RUTA PRINCIPAL ===
+#------------ RUTA PRINCIPAL
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -330,7 +330,7 @@ def buscar_ot_data(OT):
 
     resultados = []
     casca = 0
-
+    # al momento en el que recibe la ot, lee el documento de envios y entra en un ciclo for pasando serial por serial
     for serial in variable:
         entrega = doc_entregas[doc_entregas["Serial"] == serial]
         devolucion = doc_devoluciones[doc_devoluciones["Serial"] == serial]
@@ -376,7 +376,7 @@ def buscar_ot_data(OT):
                             detalle_item["consecutivo"] = fila.get("Consecutivo Contratista", "N/A")
 
                         detalle_info.append(detalle_item)
-
+        # si no se encuentra en movimientos va a entrar al if
         if not movimientos:
             resultados.append({
                 "serial": f"cantidad: {cantidad_envio[casca]}",
@@ -387,6 +387,7 @@ def buscar_ot_data(OT):
                 "descrip": descrip_envio[casca],
                 "detalle": []
             })
+        # si se encuentra en movimientos continua con el proceso mas a fondo
         else:
             movimientos_df = pd.DataFrame(movimientos, columns=["Tipo", "Fecha", "SAP", "descrip"])
             ultimo = movimientos_df.loc[movimientos_df["Fecha"].idxmax()]
@@ -398,7 +399,7 @@ def buscar_ot_data(OT):
             estado = "📦 ENTREGADO" if tipo == "Entrega" else \
                      "📦 SALIDA" if tipo == "Salida" else "🏠 DISPONIBLE"
 
-            # 🔹 Mostrar solo el último movimiento en detalle
+            # Mostrar el ultimo dato de registro o movimiento
             ultimo_detalle = sorted(detalle_info, key=lambda x: x["fecha"], reverse=True)[:1]
 
             resultados.append({
@@ -412,8 +413,7 @@ def buscar_ot_data(OT):
             })
 
         casca += 1
-
-    # 🔹 Mover el return FUERA del for
+    # retornar valores
     return {"resultado": None, "resultados": resultados}
 
 @app.route('/buscar', methods=['POST'])
@@ -438,7 +438,6 @@ def buscar_ot1():
     return render_template('dash_sap.html', **data)
 
 
-# === EJECUCIÓN (para entorno local) ===
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))  # usa el puerto que Render le pasa
+    port = int(os.environ.get("PORT", 5000))  # usa el puerto que usa RENDER, esto cambia si es local
     app.run(host='0.0.0.0', port=port, debug=True)
