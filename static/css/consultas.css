@@ -1,0 +1,239 @@
+body {
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: radial-gradient(circle at top, #1a1a1a, #0e0e0e);
+    color: #e5e5e5;
+    display: flex;
+    flex-direction: column;
+}
+
+/* === CONTENEDOR PRINCIPAL DEL FORMULARIO === */
+.login-container {
+    /* Toma el espacio restante */
+    flex: 1; 
+    /* Centra el formulario horizontal y verticalmente */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+}
+
+/* === HEADER BASE === */
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #0d1117;
+    padding: 10px 40px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
+    border-radius: 12px;
+    margin: 20px;
+    color: #d1d5db;
+}
+
+/* === LOGO === */
+.logo {
+    height: 45px;
+    filter: drop-shadow(0 0 5px rgba(100, 149, 237, 0.4));
+}
+
+/* === NAVEGACIÓN === */
+.nav {
+    display: flex;
+    gap: 30px;
+}
+
+.nav-link {
+    color: #d1d5db;
+    text-decoration: none;
+    font-weight: 500;
+    position: relative;
+    transition: color 0.3s ease;
+}
+
+.nav-link::after {
+    content: "";
+    position: absolute;
+    bottom: -5px;
+    left: 0;
+    width: 0%;
+    height: 2px;
+    background-color: #3b82f6;
+    transition: width 0.3s ease;
+}
+
+.nav-link:hover {
+    color: #60a5fa;
+}
+
+.nav-link:hover::after {
+    width: 100%;
+}
+
+
+/* === FECHA Y CONTENEDOR DERECHA === */
+.fecha {
+    font-size: 0.85rem;
+    color: #9ca3af;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* --- SEPARACIÓN DE CÓDIGO --- */
+
+/* === ESTILOS DEL FORMULARIO (ID: usuario__grf) === */
+#usuario__grf {
+    /* Ahora el formulario es un contenedor de columna */
+    display: flex;
+    flex-direction: column; 
+    align-items: stretch; /* Asegura que los hijos ocupen el ancho total */
+    gap: 15px; /* Espacio entre los elementos del formulario */
+
+    /* Estilos de apariencia */
+    background-color: #222;
+    color: #e5e5e5;
+    padding: 50px 40px;
+    border-radius: 15px;
+    width: 340px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6);
+    text-align: left; /* Alineamos el contenido a la izquierda, no al centro */
+    animation: fadeIn 0.6s ease-in-out;
+    border: 1px solid #333;
+}
+
+h3 {
+    margin-bottom: 25px;
+    color: #f1f1f1;
+    font-weight: 600;
+    font-size: 1.4em;
+    letter-spacing: 0.5px;
+    text-align: center; /* Centrar título si lo tuvieras */
+}
+
+/* === LABEL (Archivo a cargar) === */
+#usuario__grf label {
+    margin-top: 5px;
+    margin-bottom: -5px; /* Reducir el margen inferior para acercarlo al input file */
+    display: block;
+    color: #9ca3af;
+    font-size: 0.9em;
+}
+
+/* === CAMPOS DE TEXTO y PASSWORD === */
+#usuario__grf input[type="text"],
+#usuario__grf input[type="password"] {
+    display: block;
+    width: 100%;
+    /* margin: 0 0 18px 0; <--- ELIMINADO: ahora usamos 'gap' en el formulario */
+    padding: 12px 20px;
+    border-radius: 8px;
+    border: 1px solid #444;
+    background-color: #2e2e2e;
+    color: #e5e5e5;
+    font-size: 14px;
+    outline: none;
+    transition: all 0.3s ease;
+    box-sizing: border-box;
+    text-align: left;
+}
+
+/* === INPUT FILE === */
+#usuario__grf input[type="file"] {
+    /* Estilos base para el input file */
+    display: block;
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #444;
+    border-radius: 8px;
+    background-color: #2e2e2e;
+    color: #e5e5e5;
+    box-sizing: border-box;
+    cursor: pointer;
+}
+
+#usuario__grf input[type="file"]::-webkit-file-upload-button {
+    /* Estilos del botón dentro del input file (para navegadores WebKit) */
+    background: #333;
+    color: #d1d5db;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+#usuario__grf input[type="file"]::-webkit-file-upload-button:hover {
+    background: #444;
+}
+
+
+#usuario__grf input:focus {
+    border-color: #61a5c2;
+    background-color: #353535;
+}
+
+/* === BOTÓN DE INGRESAR === */
+button[type="submit"] { /* Selector más específico para evitar conflictos */
+    width: 100%;
+    padding: 12px;
+    background: #61a5c2;
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-weight: bold;
+    font-size: 15px;
+    cursor: pointer;
+    transition: 0.3s;
+    letter-spacing: 0.5px;
+    margin-top: 10px; /* Separación del input file */
+}
+
+button[type="submit"]:hover {
+    background: #7fc0dc;
+    transform: scale(1.03);
+    box-shadow: 0 0 10px rgba(97, 165, 194, 0.5);
+}
+
+/* === MENSAJE DE ESTADO === */
+.mensaje-estado {
+    text-align: center;
+    padding: 10px 0;
+    font-size: 0.9em;
+    /* Agrega estilos para éxito/error si es necesario */
+}
+
+
+/* === RESPONSIVE === */
+@media (max-width: 768px) {
+    .header {
+        flex-direction: column;
+        text-align: center;
+        padding: 15px;
+        margin: 10px;
+    }
+
+    .nav {
+        margin: 10px 0;
+        gap: 20px;
+    }
+
+    .header-right {
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .fecha {
+        font-size: 0.8rem;
+    }
+    
+    #usuario__grf {
+        width: 90%; /* Ajusta el ancho en móviles */
+        padding: 30px 20px;
+    }
+}

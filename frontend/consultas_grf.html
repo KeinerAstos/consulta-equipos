@@ -1,0 +1,116 @@
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="../static/css/consultas.css">
+</head>
+
+<body>
+    <header class="header">
+        
+        <div class="header-left">
+            <img src="{{ url_for('static', filename='Rake.jpg') }}" alt="Logo Rake" class="logo">
+        </div>
+
+        <nav class="nav">
+            <a href="/" class="nav-link">Inicio</a>
+            <a href="/table" class="nav-link">Tablero</a>
+            <a href="/dashboard" class="nav-link">Dashboard</a>
+        </nav>
+
+        <div class="header-right">
+            <a href="/login" class="login-icon" title="Iniciar sesión">
+                <i data-lucide="user"></i>
+            </a>
+
+            <script>
+                lucide.createIcons();
+            </script>
+
+            <span class="fecha">Última actualización: 10:00 AM - 14/11/2025</span>
+        </div>
+    </header>
+    <div class="login-container">
+        <form id="usuario__grf">
+            
+            <input type="text" id="usuario" name="usuario" placeholder="Usuario grf">
+            <input type="password" id="contraseña" name="contraseña" placeholder="Contraseña">
+
+            <label for="">Archivo a cargar</label>
+            <input type="file" id="archivo" name="archivo">
+            <button type="submit">Guardar</button>
+            <div id="mensaje" class="mensaje-estado"></div>
+        </form>
+    </div>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const form = document.getElementById("usuario__grf");
+
+        })
+
+        document.getElementById('usuario__grf').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const formData = new FormData(e.target);
+            const mensajeDiv = document.getElementById('mensaje');
+            mensajeDiv.textContent = 'Procesando...';
+            mensajeDiv.style.color = '#4285f4'; // Color azul para procesando
+
+            try {
+                const response = await fetch('/usuario_grf', { method: 'POST', body: formData });
+
+                if (response.ok) {
+                    // --- AQUÍ ESTÁ EL CAMBIO CLAVE ---
+
+                    // 1. Obtén el nombre del archivo de las cabeceras (si es posible)
+                    const contentDisposition = response.headers.get('Content-Disposition');
+                    let filename = 'descarga.xlsx'; // Nombre por defecto
+                    if (contentDisposition && contentDisposition.indexOf('attachment') !== -1) {
+                        const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
+                        if (filenameMatch && filenameMatch.length > 1) {
+                            filename = filenameMatch[1];
+                        }
+                    }
+
+                    // 2. Procesa la respuesta como un BLOB (datos binarios)
+                    const blob = await response.blob();
+
+                    // 3. Crea un enlace temporal y fuerza la descarga
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = filename; // Usa el nombre de archivo del backend
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url); // Limpia el objeto URL temporal
+
+                    // Muestra un mensaje de éxito
+                    mensajeDiv.textContent = '✅ Archivo generado y descargado correctamente.';
+                    mensajeDiv.style.color = '#0f9d58';
+
+                } else {
+                    // Si la respuesta NO es 200 OK (ej: 404 Not Found), lee el JSON de error
+                    const result = await response.json();
+                    mensajeDiv.textContent = result.message || 'Ocurrió un error desconocido.';
+                    mensajeDiv.style.color = '#d93025';
+                }
+
+            } catch (error) {
+                mensajeDiv.textContent = 'Error de conexión o del servidor.';
+                mensajeDiv.style.color = '#d93025';
+            } finally {
+                // Oculta el mensaje después de 3 segundos
+                setTimeout(() => {
+                    mensajeDiv.style.opacity = '0';
+                }, 3000);
+                mensajeDiv.style.opacity = '1';
+            }
+        });
+
+    </script>
+</body>
+
+</html>

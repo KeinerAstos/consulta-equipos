@@ -29,24 +29,70 @@ body {
 
 
 /* === HEADER GENERAL === */
-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background-color: #1e1e1e;
-  padding: 15px 40px;
-  border-radius: 10px;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4);
-  flex-wrap: wrap;
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #0d1117;
+    padding: 10px 40px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
+    border-radius: 12px;
+    margin: 20px;
+    color: #d1d5db;
 }
 
 /* === LOGO === */
-.logo img {
-  height: 45px;
-  border-radius: 6px;
-  box-shadow: 0 0 5px rgba(255, 255, 255, 0.1);
+.logo {
+    height: 45px;
+    filter: drop-shadow(0 0 5px rgba(100, 149, 237, 0.4));
 }
 
+/* === NAVEGACIÓN === */
+.nav {
+    display: flex;
+    gap: 30px;
+}
+
+.nav-link {
+    color: #d1d5db;
+    text-decoration: none;
+    font-weight: 500;
+    position: relative;
+    transition: color 0.3s ease;
+}
+
+.nav-link::after {
+    content: "";
+    position: absolute;
+    bottom: -5px;
+    left: 0;
+    width: 0%;
+    height: 2px;
+    background-color: #3b82f6;
+    transition: width 0.3s ease;
+}
+
+.nav-link:hover {
+    color: #60a5fa;
+}
+
+.nav-link:hover::after {
+    width: 100%;
+}
+
+
+/* === FECHA Y CONTENEDOR DERECHA === */
+.fecha {
+    font-size: 0.85rem;
+    color: #9ca3af;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
 /* === BOTONES === */
 #inicio, #tablero {
   margin: 0 10px;

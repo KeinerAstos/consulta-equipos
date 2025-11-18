@@ -80,6 +80,20 @@ def tabla_usuario():
     data = obtener_asignaciones()
     return render_template('table.html', data=data)
 
+# === DASHBOARD ===
+@app.route('/consultas_grf')
+def consultar_grf():
+    # Verificar sesión
+    if 'usuario_id' not in session:
+        return redirect(url_for('login'))
+    data = obtener_asignaciones()
+    # Enviar datos al template
+    return render_template('consultas_grf.html',
+        nombre=session.get('usuario_nombre', 'Invitado'),
+        rol=session.get('usuario_rol', 'Sin rol'),
+        data=data)
+
+
 @app.route('/buscar_usuarios', methods=['GET'])
 def buscar_usuarios():
     nombre = request.args.get('nombre', '').lower()
@@ -257,6 +271,37 @@ def eliminar_asignacion(serial):
         return jsonify({'status': 'error', 'message': 'Error al registrar el movimiento.'}), 500
 
 
+from flask import Flask, request, send_file, jsonify
+import grf # Asegúrate de importar tu módulo
+
+# ... (resto de la configuración de Flask)
+
+@app.route('/usuario_grf', methods=['POST'])
+def usuario_grf():
+    usuario = request.form['usuario']
+    contra = request.form['contraseña']
+    archivo = request.files['archivo']
+    
+    excel_buffer = grf.consultar_en_grf(usuario, contra, archivo)
+
+    # --- CAMBIO IMPORTANTE AQUÍ ---
+    if excel_buffer is None or excel_buffer.getbuffer().nbytes == 0:
+        # Si no hay datos, devuelve un error JSON 
+        # y un código de estado 404 Not Found o 400 Bad Request
+        print(f"❌ No se pudo generar el archivo para el usuario {usuario}")
+        return jsonify({
+            'status': 'error', 
+            'message': '❌ No se encontraron datos para los seriales proporcionados.'
+        }), 404 # Código de error HTTP 404
+
+    # Si hay datos, procede a enviar el archivo
+    return send_file(
+        excel_buffer,
+        as_attachment=True,
+        download_name="resultados.xlsx", 
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+
 @app.route('/insertar_asignacion', methods=['POST'])
 def insertar_asignacion():
     serial = request.form['serial']
@@ -269,6 +314,7 @@ def insertar_asignacion():
         dato = doc_stock[doc_stock["Serial"] == serial].iloc[0]  # Tomamos la primera fila
         sap = dato["Codigo material"]
         descripcion = dato["Descripción"]
+        
 
         try:
             conn = get_connection()

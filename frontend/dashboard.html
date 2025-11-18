@@ -5,7 +5,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Panel de Control</title>
-    <link rel="stylesheet" href="static/css/dashboard.css">
+    <link rel="stylesheet" href="../static/css/dashboard.css">
 </head>
 
 <body>
@@ -22,18 +22,31 @@
         }
     </style>
 
-    <header>
+    <header class="header">
         <h2>Bienvenido, {{ nombre }}</h2>
-        <div id="inicio">
-            <a href="/dash_sap" class="btn">Inicio</a>
+        <div class="header-left">
+            <img src="{{ url_for('static', filename='Rake.jpg') }}" alt="Logo Rake" class="logo">
         </div>
-        <div id="tablero">
-            <a href="/dash_table" class="btn">Tablero</a>
-        </div>
-        <p>Tu rol es: <strong>{{ rol }}</strong></p>
-        <a href="/logout" class="btn">Cerrar sesión</a>
-    </header>
 
+        <nav class="nav">
+            <a href="/dash_sap" class="nav-link">Inicio</a>
+            <a href="/dash_table" class="nav-link">Tablero</a>
+            <a href="/consultas_grf" class="nav-link">Consultas grf</a>
+            <a href="/dashboard" class="nav-link">Dashboard</a>
+        </nav>
+
+        <div class="header-right">
+            <a href="/login" class="login-icon" title="Iniciar sesión">
+                <i data-lucide="user"></i>
+            </a>
+
+            <script>
+                lucide.createIcons();
+            </script>
+
+            <span class="fecha">Última actualización: 10:00 AM - 14/11/2025</span>
+        </div>
+    </header>
 
     <h1>LISTA DE ASIGNACIÓN DE PRECONFIGURADORES</h1>
     <h2>Registrar nuevo usuario</h2>
