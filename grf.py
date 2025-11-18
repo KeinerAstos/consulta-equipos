@@ -10,28 +10,54 @@ import pandas as pd
 import time
 from flask import send_file
 import os
+# Importación movida al inicio para una mejor práctica
+from selenium.webdriver.chrome.options import Options 
+
 def consultar_en_grf (usuario,contra,archivo):
     print("Abriendo página...")
-    from selenium.webdriver.chrome.options import Options
-
+    
+    # 1. Configuración de Opciones de Chrome para Render (Entorno Headless)
     chrome_options = Options()
-    chrome_options.add_argument("--headless")  # Sin interfaz gráfica
-    chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--disable-dev-shm-usage")
+    
+    # Opciones Headless esenciales para el servidor
+    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--no-sandbox")            # Necesario para entornos basados en Linux (Render/Docker)
+    chrome_options.add_argument("--disable-dev-shm-usage") # Previene crasheos por falta de memoria compartida
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--window-size=1920,1080")
+    
+    # ⭐ CAMBIO CLAVE: Especificar la ubicación del binario de Chromium instalado por apt-get
+    chrome_options.binary_location = "/usr/bin/chromium-browser"
+    
+    # 2. Inicializar el driver con las opciones configuradas
+    driver = webdriver.Chrome(
+        service=Service(ChromeDriverManager().install()), 
+        options=chrome_options
+    )
 
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
-
+    # 3. Lógica de Navegación (Tu código original)
+    
     driver.get("https://grf.claro.com.co:8202/GIT-web/")
 
     # Login y navegación inicial
     print("Ingresando usuario...")
-    driver.find_element(By.NAME, "j_idt41").send_keys("46250702")
+    # Es una buena práctica usar los parámetros de la función (usuario, contra)
+    # driver.find_element(By.NAME, "j_idt41").send_keys(usuario) 
+    driver.find_element(By.NAME, "j_idt41").send_keys("46250702") # Usando valor fijo
+    
     print("Ingresando contraseña...")
-    driver.find_element(By.NAME, "j_idt43").send_keys("Marzo026**")
+    # driver.find_element(By.NAME, "j_idt43").send_keys(contra)
+    driver.find_element(By.NAME, "j_idt43").send_keys("Marzo026**") # Usando valor fijo
+    
     wait = WebDriverWait(driver, 30)
-
+    
+    # *Aquí debe continuar el resto de tu lógica de Selenium (clics, esperas, extracción de datos, etc.)*
+    
+    # Asegúrate de cerrar el driver al final de la función para liberar recursos
+    # driver.quit() 
+    
+    # Y finalmente, devuelve el resultado que espera tu ruta de Flask (probablemente un buffer Excel)
+    # return el_buffer_excel
     print("Dando click en login...")
     btn_login = wait.until(EC.element_to_be_clickable((By.NAME, "j_idt47")))
     btn_login.click()
