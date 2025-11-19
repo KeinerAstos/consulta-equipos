@@ -32,17 +32,26 @@ def consultar_en_grf (usuario,contra,archivo):
     try:
         # 1. Configuración de Opciones de Chrome para Render (Entorno Headless)
         chrome_options = Options()
-        
-        # Opciones Headless esenciales para el servidor
-        chrome_options.add_argument("--headless")
-        chrome_options.add_argument("--no-sandbox") 
+
+        # Headless moderno necesario en Render
+        chrome_options.add_argument("--headless=new")
+
+        # Flags esenciales de Render
+        chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
         chrome_options.add_argument("--disable-gpu")
+        chrome_options.add_argument("--disable-software-rasterizer")
+        chrome_options.add_argument("--disable-extensions")
+        chrome_options.add_argument("--disable-infobars")
+        chrome_options.add_argument("--remote-debugging-port=9222")
         chrome_options.add_argument("--window-size=1920,1080")
+
+        # Ruta al Chrome instalado manualmente
+        chrome_options.binary_location = CHROME_BIN
+
         
         # ⭐ AJUSTE 1: Usa la ubicación donde instalamos el navegador (CHROME_BIN)
         # Esto reemplaza el binario que fallaba (/usr/bin/chromium-browser)
-        chrome_options.binary_location = CHROME_BIN
         
         # 2. Inicializar el driver con la ruta manual del driver
         driver = webdriver.Chrome(
