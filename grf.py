@@ -52,7 +52,6 @@ def consultar_en_grf (usuario,contra,archivo):
         
         # ⭐ AJUSTE 1: Usa la ubicación donde instalamos el navegador (CHROME_BIN)
         # Esto reemplaza el binario que fallaba (/usr/bin/chromium-browser)
-        
         # 2. Inicializar el driver con la ruta manual del driver
         driver = webdriver.Chrome(
             service=Service(DRIVER_BIN), # <-- Usa la ruta del DRIVER que instalamos
