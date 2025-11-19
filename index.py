@@ -276,31 +276,31 @@ import grf # Asegúrate de importar tu módulo
 
 # ... (resto de la configuración de Flask)
 
-@app.route('/usuario_grf', methods=['POST'])
-def usuario_grf():
-    usuario = request.form['usuario']
-    contra = request.form['contraseña']
-    archivo = request.files['archivo']
+# @app.route('/usuario_grf', methods=['POST'])
+# def usuario_grf():
+#     usuario = request.form['usuario']
+#     contra = request.form['contraseña']
+#     archivo = request.files['archivo']
     
-    excel_buffer = grf.consultar_en_grf(usuario, contra, archivo)
+#     excel_buffer = grf.consultar_en_grf(usuario, contra, archivo)
 
-    # --- CAMBIO IMPORTANTE AQUÍ ---
-    if excel_buffer is None or excel_buffer.getbuffer().nbytes == 0:
-        # Si no hay datos, devuelve un error JSON 
-        # y un código de estado 404 Not Found o 400 Bad Request
-        print(f"❌ No se pudo generar el archivo para el usuario {usuario}")
-        return jsonify({
-            'status': 'error', 
-            'message': '❌ No se encontraron datos para los seriales proporcionados.'
-        }), 404 # Código de error HTTP 404
+#     # --- CAMBIO IMPORTANTE AQUÍ ---
+#     if excel_buffer is None or excel_buffer.getbuffer().nbytes == 0:
+#         # Si no hay datos, devuelve un error JSON 
+#         # y un código de estado 404 Not Found o 400 Bad Request
+#         print(f"❌ No se pudo generar el archivo para el usuario {usuario}")
+#         return jsonify({
+#             'status': 'error', 
+#             'message': '❌ No se encontraron datos para los seriales proporcionados.'
+#         }), 404 # Código de error HTTP 404
 
-    # Si hay datos, procede a enviar el archivo
-    return send_file(
-        excel_buffer,
-        as_attachment=True,
-        download_name="resultados.xlsx", 
-        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    )
+#     # Si hay datos, procede a enviar el archivo
+#     return send_file(
+#         excel_buffer,
+#         as_attachment=True,
+#         download_name="resultados.xlsx", 
+#         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+#     )
 
 @app.route('/insertar_asignacion', methods=['POST'])
 def insertar_asignacion():
