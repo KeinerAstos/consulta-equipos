@@ -218,8 +218,29 @@ def dashboard():
         rol=session.get('usuario_rol', 'Sin rol'),
         data=data
     )
-# @app.route('/terreno_seriales')
-# def terreno_seriales():
+@app.route('/terreno_seriales')
+def terreno_seriales():
+    seriales = doc_seriales_terreno['serial'].tolist()
+    sap = doc_seriales_terreno['codigo_sap'].tolist()
+    descripcion = doc_seriales_terreno['descripcion_sap'].tolist()
+    nombre_tecnico = doc_seriales_terreno['nombre_tecnico'].tolist()
+
+    data = defaultdict(list)
+
+    for i in range(len(seriales)):
+        tecnico = nombre_tecnico[i]
+        data[tecnico].append({
+            'nombre': tecnico,
+            'serial': seriales[i],
+            'sap': sap[i],
+            'descripcion': descripcion[i]
+        })
+
+    return render_template(
+        "table_pim.html",  # ← tu archivo HTML
+        data=data
+    )
+
 
 
 @app.route('/eliminar_asignacion/<serial>', methods=['DELETE'])

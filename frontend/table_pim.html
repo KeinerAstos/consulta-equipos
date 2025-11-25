@@ -44,9 +44,9 @@
                     <tbody>
                         {% for e in equipos %}
                         <tr>
-                            <td>{{ e.sap }}</td>
-                            <td>{{ e.descripcion }}</td>
-                            <td>{{ e.serial }}</td>
+                            <td>{{ e['sap'] }}</td>
+                            <td>{{ e['descripcion'] }}</td>
+                            <td>{{ e['serial'] }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -58,8 +58,6 @@
         </section>
         {% endfor %}
     </main>
-
-
 
 </body>
 
