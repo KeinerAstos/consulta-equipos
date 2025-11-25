@@ -26,7 +26,7 @@ def crear_driver_browserless():
     chrome_options.add_argument("--disable-blink-features=AutomationControlled")
 
     driver = webdriver.Remote(
-        command_executor=f"https://chrome.browserless.io/webdriver?token={os.getenv('BROWSERLESS_TOKEN')}",
+        command_executor=f"https://production-sfo.browserless.io/webdriver?token={os.getenv('BROWSERLESS_TOKEN')}",
         options=chrome_options
     )
     return driver
