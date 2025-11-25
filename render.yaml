@@ -1,10 +1,17 @@
 services:
   - type: web
-    name: consulta-equipos
+    name: tu-app-flask
     env: python
-    buildCommand: "pip install -r requirements.txt"
-    startCommand: "gunicorn index:app"
-    plan: free
-    envVars:
-      - key: PYTHON_VERSION
-        value: 3.11
+    buildCommand: |
+      pip install -r requirements.txt
+      mkdir -p $HOME/.local/bin/chrome
+      mkdir -p $HOME/.local/bin/chromedriver
+      cd $HOME/.local/bin/chrome
+      wget -q https://storage.googleapis.com/chrome-for-testing-public/131.0.6778.108/linux64/chrome-linux64.zip
+      unzip -q chrome-linux64.zip
+      cd $HOME/.local/bin/chromedriver
+      wget -q https://storage.googleapis.com/chrome-for-testing-public/131.0.6778.108/linux64/chromedriver-linux64.zip
+      unzip -q chromedriver-linux64.zip
+      chmod +x $HOME/.local/bin/chromedriver/chromedriver-linux64/chromedriver
+    startCommand: gunicorn index:app
+    region: oregon

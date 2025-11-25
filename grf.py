@@ -22,7 +22,6 @@ from selenium.webdriver.chrome.options import Options
 CHROME_BIN = os.path.expanduser("~") + "/.local/bin/chrome/chrome-linux64/chrome"
 DRIVER_BIN = os.path.expanduser("~") + "/.local/bin/chromedriver/chromedriver-linux64/chromedriver"
 
-
 def consultar_en_grf (usuario,contra,archivo):
     print("Abriendo página...")
     

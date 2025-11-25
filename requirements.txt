@@ -1,7 +1,7 @@
-Flask
+flask
+selenium
 pandas
 openpyxl
-gunicorn
+xlsxwriter
 psycopg2-binary
-selenium
-webdriver-manager
+gunicorn
