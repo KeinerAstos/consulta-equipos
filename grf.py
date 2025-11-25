@@ -11,9 +11,11 @@ from flask import send_file
 import os
 from selenium.webdriver.chrome.options import Options 
 
-BASE_CHROME_DIR = "/opt/render/project/src/.chrome"
-CHROME_BIN = f"{BASE_CHROME_DIR}/chrome-linux64/chrome"
-DRIVER_BIN = f"{BASE_CHROME_DIR}/chromedriver-linux64/chromedriver"
+
+HOME = os.path.expanduser("~")
+
+CHROME_BIN = f"{HOME}/.local/bin/chrome/chrome-linux64/chrome"
+DRIVER_BIN = f"{HOME}/.local/bin/chromedriver/chromedriver-linux64/chromedriver"
 
 def consultar_en_grf(usuario, contra, archivo):
     print("🔍 Verificando rutas de Chrome y ChromeDriver...")
