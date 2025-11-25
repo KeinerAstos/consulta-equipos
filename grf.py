@@ -14,7 +14,6 @@ from selenium.webdriver.chrome.options import Options
 
 HOME = "/opt/render/project/.local"
 
-
 CHROME_BIN = "/opt/render/project/.local/bin/chrome/chrome-linux64/chrome"
 DRIVER_BIN = "/opt/render/project/.local/bin/chromedriver/chromedriver-linux64/chromedriver"
 
@@ -24,7 +23,30 @@ def consultar_en_grf(usuario, contra, archivo):
     print(f"ChromeDriver: {DRIVER_BIN}")
     print(f"Chrome existe: {os.path.exists(CHROME_BIN)}")
     print(f"Driver existe: {os.path.exists(DRIVER_BIN)}")
+
+    # ====== 🔥 BLOQUE DE DIAGNÓSTICO COMPLETO 🔥 ======
+    print("==== DIAGNOSTICO DE RUTAS ====")
+    print("PWD:", os.getcwd())
+    print("HOME:", os.path.expanduser("~"))
     
+    try:
+        print("Contenido de HOME:", os.listdir(os.path.expanduser("~")))
+    except:
+        print("No se pudo listar HOME")
+
+    print("Buscando chrome-linux64 en todo el sistema...")
+    for root, dirs, files in os.walk("/", topdown=True):
+        if "chrome-linux64" in dirs:
+            print("🔥 ENCONTRADO CHROME EN:", os.path.join(root, "chrome-linux64"))
+            break
+
+    print("Buscando chromedriver-linux64...")
+    for root, dirs, files in os.walk("/", topdown=True):
+        if "chromedriver-linux64" in dirs:
+            print("🔥 ENCONTRADO CHROMEDRIVER EN:", os.path.join(root, "chromedriver-linux64"))
+            break
+    # ===================================================
+
     # Verificar permisos
     if os.path.exists(CHROME_BIN):
         print(f"Chrome ejecutable: {os.access(CHROME_BIN, os.X_OK)}")
