@@ -9,7 +9,7 @@
 
 <body>
     <header class="header">
-        
+
         <div class="header-left">
             <img src="{{ url_for('static', filename='Rake.jpg') }}" alt="Logo Rake" class="logo">
         </div>
@@ -25,16 +25,21 @@
                 <i data-lucide="user"></i>
             </a>
 
+            <!-- Cargar librería Lucide -->
+            <script src="https://unpkg.com/lucide@latest"></script>
+
+            <!-- Generar iconos -->
             <script>
                 lucide.createIcons();
             </script>
+
 
             <span class="fecha">Última actualización: 10:00 AM - 14/11/2025</span>
         </div>
     </header>
     <div class="login-container">
         <form id="usuario__grf">
-            
+
             <input type="text" id="usuario" name="usuario" placeholder="Usuario grf">
             <input type="password" id="contraseña" name="contraseña" placeholder="Contraseña">
 
