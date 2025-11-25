@@ -1,7 +1,15 @@
+
 services:
   - type: web
     name: consulta-equipos
     env: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: bash install_chrome.sh && gunicorn index:app --bind 0.0.0.0:$PORT
+
+    buildCommand: |
+      pip install -r requirements.txt
+      chmod +x install_chrome.sh
+      ./install_chrome.sh
+
+    startCommand: |
+      gunicorn index:app --bind 0.0.0.0:$PORT --workers 1 --timeout 200
+
     region: oregon

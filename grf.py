@@ -7,71 +7,52 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import StaleElementReferenceException, TimeoutException
 import pandas as pd
 import time
-from flask import send_file
 import os
 
-# ========= RUTAS CORRECTAS EN RUNTIME =========
-# Chrome se instala en /opt/google/chrome/google-chrome
-# Chromedriver se instala en /usr/local/bin/chromedriver
-CHROME_BIN = "/opt/google/chrome/google-chrome"
+# Rutas seguras en Render cuando instalamos Chrome/Chromedriver con apt
+CHROME_BIN = "/usr/bin/google-chrome"
 DRIVER_BIN = "/usr/local/bin/chromedriver"
-# ==============================================
 
 
 def consultar_en_grf(usuario, contra, archivo):
-    print("🔍 Verificando rutas de Chrome y ChromeDriver...")
-    print(f"Chrome Binary: {CHROME_BIN}")
-    print(f"ChromeDriver: {DRIVER_BIN}")
 
-    print(f"Chrome existe: {os.path.exists(CHROME_BIN)}")
-    print(f"Driver existe: {os.path.exists(DRIVER_BIN)}")
-
-    print("Chrome ejecutable:", os.access(CHROME_BIN, os.X_OK))
-    print("Driver ejecutable:", os.access(DRIVER_BIN, os.X_OK))
-
-    print("==== DIAGNOSTICO DE RUTAS ====")
-    print("PWD:", os.getcwd())
-    print("HOME:", os.path.expanduser("~"))
-
-    # Driver
-    driver = None
+    print("🔍 Verificando rutas de Chrome y Chromedriver...")
+    print(f"Chrome: {CHROME_BIN} existe? {os.path.exists(CHROME_BIN)}")
+    print(f"Driver: {DRIVER_BIN} existe? {os.path.exists(DRIVER_BIN)}")
 
     try:
         chrome_options = webdriver.ChromeOptions()
 
-        # Modo headless moderno
-        chrome_options.add_argument("--headless=new")
+        chrome_options.binary_location = CHROME_BIN
 
-        # Flags para reducir RAM
-        chrome_options.add_argument("--single-process")
+        # Modo headless optimizado para Render
+        chrome_options.add_argument("--headless=new")
         chrome_options.add_argument("--no-sandbox")
-        chrome_options.add_argument("--disable-gpu")
         chrome_options.add_argument("--disable-dev-shm-usage")
+        chrome_options.add_argument("--disable-gpu")
         chrome_options.add_argument("--disable-software-rasterizer")
         chrome_options.add_argument("--disable-extensions")
         chrome_options.add_argument("--disable-infobars")
-        chrome_options.add_argument("--disable-breakpad")
-        chrome_options.add_argument("--disable-crash-reporter")
-        chrome_options.add_argument("--disable-features=VizDisplayCompositor")
-        chrome_options.add_argument("--renderer-process-limit=2")
-        chrome_options.add_argument("--js-flags=--lite-mode")
-        chrome_options.add_argument("--window-size=800,600")
 
-        chrome_options.binary_location = CHROME_BIN
+        chrome_options.add_argument("--window-size=1280,720")
 
-        # Crear el driver
-        print(f"🚀 Inicializando driver con: {DRIVER_BIN}")
-
+        print("🚀 Inicializando ChromeDriver...")
         driver = webdriver.Chrome(
             service=Service(DRIVER_BIN),
             options=chrome_options
         )
 
-        print("🌐 Abriendo página de GRF...")
+        print("🌐 Abriendo página...")
         driver.get("https://grf.claro.com.co:8202/GIT-web/")
 
         wait = WebDriverWait(driver, 30)
+
+        print("Ingresando usuario...")
+        driver.find_element(By.NAME, "j_idt41").send_keys("46250702")
         
+        print("Ingresando contraseña...")
+        driver.find_element(By.NAME, "j_idt43").send_keys("Marzo026**")
+
         print("Dando click en login...")
         btn_login = wait.until(EC.element_to_be_clickable((By.NAME, "j_idt47")))
         btn_login.click()

@@ -1,20 +1,29 @@
 #!/usr/bin/env bash
 set -e
 
-echo "=== INSTALANDO CHROME EN RUNTIME ==="
+echo "=== INSTALANDO GOOGLE CHROME ==="
 
-mkdir -p $HOME/.local/bin/chrome
-mkdir -p $HOME/.local/bin/chromedriver
+# Instalar dependencias mínimas
+apt-get update
+apt-get install -y wget gnupg unzip
 
-# Descargar Chrome
-wget -q https://storage.googleapis.com/chrome-for-testing-public/131.0.6778.108/linux64/chrome-linux64.zip
-unzip -o -q chrome-linux64.zip -d $HOME/.local/bin/chrome
+# Descargar e instalar Google Chrome estable
+wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+apt-get install -y ./google-chrome-stable_current_amd64.deb
 
-# Descargar Chromedriver
-wget -q https://storage.googleapis.com/chrome-for-testing-public/131.0.6778.108/linux64/chromedriver-linux64.zip
-unzip -o -q chromedriver-linux64.zip -d $HOME/.local/bin/chromedriver
+echo "=== INSTALANDO CHROMEDRIVER ==="
 
-chmod +x $HOME/.local/bin/chrome/chrome-linux64/chrome
-chmod +x $HOME/.local/bin/chromedriver/chromedriver-linux64/chromedriver
+CHROME_VERSION=$(google-chrome --version | awk '{print $3}' | cut -d. -f1)
+echo "Versión de Chrome detectada: $CHROME_VERSION"
 
-echo "=== Chrome instalado en runtime ==="
+# Descargar chromedriver EXACTO para tu versión de Chrome
+wget -q "https://chromedriver.storage.googleapis.com/$CHROME_VERSION.0.0/chromedriver_linux64.zip" -O chromedriver.zip
+unzip -o chromedriver.zip
+chmod +x chromedriver
+mv chromedriver /usr/local/bin/chromedriver
+
+echo "=== VERIFICANDO ==="
+ls -la /usr/bin/google-chrome
+ls -la /usr/local/bin/chromedriver
+
+echo "=== INSTALACIÓN COMPLETA ==="
