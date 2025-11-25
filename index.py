@@ -30,6 +30,7 @@ doc_salidas = pd.read_excel(ruta, sheet_name='SALIDAS')
 doc_entradas = pd.read_excel(ruta, sheet_name="ENTRADAS")
 doc_stock = pd.read_excel(ruta, sheet_name="STOCK")
 doc_envios = pd.read_excel(ruta, sheet_name="ENVIOS")
+doc_seriales_terreno = pd.read_excel(ruta,sheet_name="TERRENO_SERIALES")
 
 # Limpieza básica
 for df in [doc_entregas, doc_devoluciones, doc_salidas, doc_entradas,doc_stock]:
@@ -217,6 +218,9 @@ def dashboard():
         rol=session.get('usuario_rol', 'Sin rol'),
         data=data
     )
+# @app.route('/terreno_seriales')
+# def terreno_seriales():
+
 
 @app.route('/eliminar_asignacion/<serial>', methods=['DELETE'])
 def eliminar_asignacion(serial):
