@@ -9,93 +9,67 @@ import pandas as pd
 import time
 from flask import send_file
 import os
-from selenium.webdriver.chrome.options import Options 
 
-
-HOME = "/opt/render/.local"
-
-CHROME_BIN = "/opt/render/.local/bin/chrome/chrome-linux64/chrome"
-DRIVER_BIN = "/opt/render/.local/bin/chromedriver/chromedriver-linux64/chromedriver"
+# ========= RUTAS CORRECTAS EN RUNTIME =========
+# Chrome se instala en /opt/google/chrome/google-chrome
+# Chromedriver se instala en /usr/local/bin/chromedriver
+CHROME_BIN = "/opt/google/chrome/google-chrome"
+DRIVER_BIN = "/usr/local/bin/chromedriver"
+# ==============================================
 
 
 def consultar_en_grf(usuario, contra, archivo):
     print("🔍 Verificando rutas de Chrome y ChromeDriver...")
     print(f"Chrome Binary: {CHROME_BIN}")
     print(f"ChromeDriver: {DRIVER_BIN}")
+
     print(f"Chrome existe: {os.path.exists(CHROME_BIN)}")
     print(f"Driver existe: {os.path.exists(DRIVER_BIN)}")
 
-    # ====== 🔥 BLOQUE DE DIAGNÓSTICO COMPLETO 🔥 ======
+    print("Chrome ejecutable:", os.access(CHROME_BIN, os.X_OK))
+    print("Driver ejecutable:", os.access(DRIVER_BIN, os.X_OK))
+
     print("==== DIAGNOSTICO DE RUTAS ====")
     print("PWD:", os.getcwd())
     print("HOME:", os.path.expanduser("~"))
-    
+
+    # Driver
+    driver = None
+
     try:
-        print("Contenido de HOME:", os.listdir(os.path.expanduser("~")))
-    except:
-        print("No se pudo listar HOME")
+        chrome_options = webdriver.ChromeOptions()
 
-    print("Buscando chrome-linux64 en todo el sistema...")
-    for root, dirs, files in os.walk("/", topdown=True):
-        if "chrome-linux64" in dirs:
-            print("🔥 ENCONTRADO CHROME EN:", os.path.join(root, "chrome-linux64"))
-            break
-
-    print("Buscando chromedriver-linux64...")
-    for root, dirs, files in os.walk("/", topdown=True):
-        if "chromedriver-linux64" in dirs:
-            print("🔥 ENCONTRADO CHROMEDRIVER EN:", os.path.join(root, "chromedriver-linux64"))
-            break
-    # ===================================================
-
-    # Verificar permisos
-    if os.path.exists(CHROME_BIN):
-        print(f"Chrome ejecutable: {os.access(CHROME_BIN, os.X_OK)}")
-    if os.path.exists(DRIVER_BIN):
-        print(f"Driver ejecutable: {os.access(DRIVER_BIN, os.X_OK)}")
-    
-    print("Abriendo página...")
-    
-    driver = None 
-    
-    try:
-        chrome_options = Options()
+        # Modo headless moderno
         chrome_options.add_argument("--headless=new")
+
+        # Flags para reducir RAM
+        chrome_options.add_argument("--single-process")
         chrome_options.add_argument("--no-sandbox")
-        chrome_options.add_argument("--disable-dev-shm-usage")
         chrome_options.add_argument("--disable-gpu")
+        chrome_options.add_argument("--disable-dev-shm-usage")
         chrome_options.add_argument("--disable-software-rasterizer")
         chrome_options.add_argument("--disable-extensions")
         chrome_options.add_argument("--disable-infobars")
-        chrome_options.add_argument("--remote-debugging-port=9222")
-        chrome_options.add_argument("--window-size=1920,1080")
-        
-        # Verificar que existe antes de asignar
-        if not os.path.exists(CHROME_BIN):
-            raise Exception(f"❌ Chrome binary no encontrado en: {CHROME_BIN}")
-        
+        chrome_options.add_argument("--disable-breakpad")
+        chrome_options.add_argument("--disable-crash-reporter")
+        chrome_options.add_argument("--disable-features=VizDisplayCompositor")
+        chrome_options.add_argument("--renderer-process-limit=2")
+        chrome_options.add_argument("--js-flags=--lite-mode")
+        chrome_options.add_argument("--window-size=800,600")
+
         chrome_options.binary_location = CHROME_BIN
-        
-        # Verificar que el driver existe antes de crear el servicio
-        if not os.path.exists(DRIVER_BIN):
-            raise Exception(f"❌ ChromeDriver no encontrado en: {DRIVER_BIN}")
-        
-        print(f"✅ Inicializando driver con: {DRIVER_BIN}")
-        
+
+        # Crear el driver
+        print(f"🚀 Inicializando driver con: {DRIVER_BIN}")
+
         driver = webdriver.Chrome(
             service=Service(DRIVER_BIN),
             options=chrome_options
         )
 
-        # Resto de tu código...
+        print("🌐 Abriendo página de GRF...")
         driver.get("https://grf.claro.com.co:8202/GIT-web/")
 
-        print("Ingresando usuario...")
-        driver.find_element(By.NAME, "j_idt41").send_keys("46250702")
-        
-        print("Ingresando contraseña...")
-        driver.find_element(By.NAME, "j_idt43").send_keys("Marzo026**")
-        
         wait = WebDriverWait(driver, 30)
         
         print("Dando click en login...")
