@@ -10,8 +10,8 @@ import time
 import os
 
 
-CHROME_BIN = "/opt/render/.local/bin/chrome/chrome-linux64/chrome"
-DRIVER_BIN = "/opt/render/.local/bin/chromedriver/chromedriver-linux64/chromedriver"
+CHROME_BIN = "/usr/bin/google-chrome"
+DRIVER_BIN = "/usr/local/bin/chromedriver"
 
 
 def consultar_en_grf(usuario, contra, archivo):

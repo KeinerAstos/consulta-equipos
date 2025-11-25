@@ -4,20 +4,15 @@ services:
     env: python
 
     buildCommand: |
-      pip install -r requirements.txt
-      rm -rf $HOME/.local/bin/chrome $HOME/.local/bin/chromedriver
-      mkdir -p $HOME/.local/bin/chrome
-      mkdir -p $HOME/.local/bin/chromedriver
-      cd $HOME/.local/bin/chrome
-      wget -q https://storage.googleapis.com/chrome-for-testing-public/131.0.6778.108/linux64/chrome-linux64.zip
-      unzip -o -q chrome-linux64.zip
-      cd $HOME/.local/bin/chromedriver
-      wget -q https://storage.googleapis.com/chrome-for-testing-public/131.0.6778.108/linux64/chromedriver-linux64.zip
-      unzip -o -q chromedriver-linux64.zip
-      chmod +x $HOME/.local/bin/chromedriver/chromedriver-linux64/chromedriver
-      chmod +x $HOME/.local/bin/chrome/chrome-linux64/chrome
+      apt-get update
+      apt-get install -y wget unzip gnupg
+      wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+      apt-get install -y ./google-chrome-stable_current_amd64.deb
+      CHROME_VERSION=$(google-chrome --version | awk '{print $3}' | cut -d. -f1)
+      wget -q "https://chromedriver.storage.googleapis.com/${CHROME_VERSION}.0.0/chromedriver_linux64.zip"
+      unzip chromedriver_linux64.zip
+      mv chromedriver /usr/local/bin/chromedriver
+      chmod +x /usr/local/bin/chromedriver
 
     startCommand: |
       gunicorn index:app --bind 0.0.0.0:$PORT --workers 1 --timeout 200
-
-    region: oregon
