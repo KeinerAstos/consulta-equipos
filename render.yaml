@@ -1,17 +1,19 @@
 services:
   - type: web
-    name: tu-app-flask
+    name: consulta-equipos
     env: python
     buildCommand: |
       pip install -r requirements.txt
+      rm -rf $HOME/.local/bin/chrome $HOME/.local/bin/chromedriver
       mkdir -p $HOME/.local/bin/chrome
       mkdir -p $HOME/.local/bin/chromedriver
       cd $HOME/.local/bin/chrome
       wget -q https://storage.googleapis.com/chrome-for-testing-public/131.0.6778.108/linux64/chrome-linux64.zip
-      unzip -q chrome-linux64.zip
+      unzip -o -q chrome-linux64.zip
       cd $HOME/.local/bin/chromedriver
       wget -q https://storage.googleapis.com/chrome-for-testing-public/131.0.6778.108/linux64/chromedriver-linux64.zip
-      unzip -q chromedriver-linux64.zip
+      unzip -o -q chromedriver-linux64.zip
       chmod +x $HOME/.local/bin/chromedriver/chromedriver-linux64/chromedriver
-    startCommand: gunicorn index:app
+      chmod +x $HOME/.local/bin/chrome/chrome-linux64/chrome
+    startCommand: gunicorn index:app --bind 0.0.0.0:$PORT
     region: oregon

@@ -485,5 +485,5 @@ def buscar_ot1():
 
 
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))  # usa el puerto que usa RENDER, esto cambia si es local
-    app.run(host='0.0.0.0', port=port, debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port, debug=False)  # debug=False en producción
