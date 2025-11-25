@@ -1,7 +1,6 @@
 import io
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import StaleElementReferenceException, TimeoutException
@@ -9,48 +8,41 @@ import pandas as pd
 import time
 import os
 
+# -----------------------------
+# Función para crear driver con Browserless
+# -----------------------------
+def crear_driver_browserless():
+    chrome_options = webdriver.ChromeOptions()
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--headless=new")
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--disable-software-rasterizer")
+    chrome_options.add_argument("--remote-debugging-port=9222")
+    chrome_options.add_argument("--window-size=1280,720")
+    chrome_options.add_argument("--disable-browser-side-navigation")
+    chrome_options.add_argument("--ignore-certificate-errors")
+    chrome_options.add_argument("--allow-running-insecure-content")
+    chrome_options.add_argument("--disable-blink-features=AutomationControlled")
 
-CHROME_BIN = "/usr/bin/google-chrome"
-DRIVER_BIN = "/usr/local/bin/chromedriver"
+    driver = webdriver.Remote(
+        command_executor=f"https://chrome.browserless.io/webdriver?token={os.getenv('BROWSERLESS_TOKEN')}",
+        options=chrome_options
+    )
+    return driver
 
-
+# -----------------------------
+# Función principal
+# -----------------------------
 def consultar_en_grf(usuario, contra, archivo):
 
-    print("🔍 Verificando rutas de Chrome y Chromedriver...")
-    print(f"Chrome: {CHROME_BIN} existe? {os.path.exists(CHROME_BIN)}")
-    print(f"Driver: {DRIVER_BIN} existe? {os.path.exists(DRIVER_BIN)}")
-
-    driver = None
+    print("🚀 Inicializando Browserless ChromeDriver...")
+    driver = crear_driver_browserless()
+    wait = WebDriverWait(driver, 30)
 
     try:
-        chrome_options = webdriver.ChromeOptions()
-        chrome_options.binary_location = CHROME_BIN
-
-        # Config obligatoria en Render
-        chrome_options.add_argument("--headless=new")
-        chrome_options.add_argument("--no-sandbox")
-        chrome_options.add_argument("--disable-dev-shm-usage")
-        chrome_options.add_argument("--disable-gpu")
-        chrome_options.add_argument("--disable-software-rasterizer")
-        chrome_options.add_argument("--remote-debugging-port=9222")
-        chrome_options.add_argument("--window-size=1280,720")
-
-        # Previene que Selenium busque un driver distinto
-        chrome_options.add_argument("--disable-browser-side-navigation")
-        chrome_options.add_argument("--ignore-certificate-errors")
-        chrome_options.add_argument("--allow-running-insecure-content")
-
-        print("🚀 Inicializando ChromeDriver...")
-
-        driver = webdriver.Chrome(
-            service=Service(DRIVER_BIN),
-            options=chrome_options
-        )
-
         print("🌐 Abriendo página...")
         driver.get("https://grf.claro.com.co:8202/GIT-web/")
-
-        wait = WebDriverWait(driver, 30)
 
         print("Ingresando usuario...")
         driver.find_element(By.NAME, "j_idt41").send_keys("46250702")
