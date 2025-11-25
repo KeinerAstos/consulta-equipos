@@ -2,8 +2,6 @@ import io
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
-# import webdriver_manager # ¡ELIMINADO!
-# from webdriver_manager.chrome import ChromeDriverManager # ¡ELIMINADO!
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import StaleElementReferenceException, TimeoutException
@@ -13,29 +11,30 @@ from flask import send_file
 import os
 from selenium.webdriver.chrome.options import Options 
 
-# =================================================================
-# ⭐ CAMBIOS CLAVE: Rutas de instalación manual en el Build Command
-# Estos binarios fueron descargados y descomprimidos en la carpeta $HOME/.local/bin/
-# =================================================================
+BASE_CHROME_DIR = "/opt/render/project/src/.chrome"
+CHROME_BIN = f"{BASE_CHROME_DIR}/chrome-linux64/chrome"
+DRIVER_BIN = f"{BASE_CHROME_DIR}/chromedriver-linux64/chromedriver"
 
-# La variable de entorno $HOME se expande correctamente en la ejecución de Python en Render
-CHROME_BIN = os.path.expanduser("~") + "/.local/bin/chrome/chrome-linux64/chrome"
-DRIVER_BIN = os.path.expanduser("~") + "/.local/bin/chromedriver/chromedriver-linux64/chromedriver"
-
-def consultar_en_grf (usuario,contra,archivo):
+def consultar_en_grf(usuario, contra, archivo):
+    print("🔍 Verificando rutas de Chrome y ChromeDriver...")
+    print(f"Chrome Binary: {CHROME_BIN}")
+    print(f"ChromeDriver: {DRIVER_BIN}")
+    print(f"Chrome existe: {os.path.exists(CHROME_BIN)}")
+    print(f"Driver existe: {os.path.exists(DRIVER_BIN)}")
+    
+    # Verificar permisos
+    if os.path.exists(CHROME_BIN):
+        print(f"Chrome ejecutable: {os.access(CHROME_BIN, os.X_OK)}")
+    if os.path.exists(DRIVER_BIN):
+        print(f"Driver ejecutable: {os.access(DRIVER_BIN, os.X_OK)}")
+    
     print("Abriendo página...")
     
-    # Aseguramos que el driver esté inicializado a None para el bloque finally
     driver = None 
     
     try:
-        # 1. Configuración de Opciones de Chrome para Render (Entorno Headless)
         chrome_options = Options()
-
-        # Headless moderno necesario en Render
         chrome_options.add_argument("--headless=new")
-
-        # Flags esenciales de Render
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
         chrome_options.add_argument("--disable-gpu")
@@ -44,37 +43,35 @@ def consultar_en_grf (usuario,contra,archivo):
         chrome_options.add_argument("--disable-infobars")
         chrome_options.add_argument("--remote-debugging-port=9222")
         chrome_options.add_argument("--window-size=1920,1080")
-
-        # Ruta al Chrome instalado manualmente
-        chrome_options.binary_location = CHROME_BIN
-
         
-        # ⭐ AJUSTE 1: Usa la ubicación donde instalamos el navegador (CHROME_BIN)
-        # Esto reemplaza el binario que fallaba (/usr/bin/chromium-browser)
-        # 2. Inicializar el driver con la ruta manual del driver
+        # Verificar que existe antes de asignar
+        if not os.path.exists(CHROME_BIN):
+            raise Exception(f"❌ Chrome binary no encontrado en: {CHROME_BIN}")
+        
+        chrome_options.binary_location = CHROME_BIN
+        
+        # Verificar que el driver existe antes de crear el servicio
+        if not os.path.exists(DRIVER_BIN):
+            raise Exception(f"❌ ChromeDriver no encontrado en: {DRIVER_BIN}")
+        
+        print(f"✅ Inicializando driver con: {DRIVER_BIN}")
+        
         driver = webdriver.Chrome(
-            service=Service(DRIVER_BIN), # <-- Usa la ruta del DRIVER que instalamos
+            service=Service(DRIVER_BIN),
             options=chrome_options
         )
 
-        # 3. Lógica de Navegación (Tu código original)
+        # Resto de tu código...
         driver.get("https://grf.claro.com.co:8202/GIT-web/")
 
-        # Login y navegación inicial
         print("Ingresando usuario...")
-        driver.find_element(By.NAME, "j_idt41").send_keys("46250702") # Usando valor fijo
+        driver.find_element(By.NAME, "j_idt41").send_keys("46250702")
         
         print("Ingresando contraseña...")
-        driver.find_element(By.NAME, "j_idt43").send_keys("Marzo026**") # Usando valor fijo
+        driver.find_element(By.NAME, "j_idt43").send_keys("Marzo026**")
         
         wait = WebDriverWait(driver, 30)
-        # *Aquí debe continuar el resto de tu lógica de Selenium (clics, esperas, extracción de datos, etc.)*
         
-        # Asegúrate de cerrar el driver al final de la función para liberar recursos
-        # driver.quit() 
-        
-        # Y finalmente, devuelve el resultado que espera tu ruta de Flask (probablemente un buffer Excel)
-        # return el_buffer_excel
         print("Dando click en login...")
         btn_login = wait.until(EC.element_to_be_clickable((By.NAME, "j_idt47")))
         btn_login.click()
@@ -94,18 +91,18 @@ def consultar_en_grf (usuario,contra,archivo):
         print("BIENVENIDO KEINER PRO, ERES EL MEJOR DE TODOS BRO")
         print("1. NACIONALES")
         print("2. BOGOTÁ")
-        # stic = int(input("Digite opcion correspondiente: "))
         stic = 2
         BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+        
         if stic == 1:
             ruta = os.path.join(BASE_DIR, 'INGRESO', 'NACIONALES.xlsx')
             doc_envios = pd.read_excel(archivo)
             lista_seriales = (
-            doc_envios["NºSerieFab"]
-            .dropna()
-            .astype(str)
-            .str.replace(r"[\s-]+", "", regex=True)
-            .tolist()
+                doc_envios["NºSerieFab"]
+                .dropna()
+                .astype(str)
+                .str.replace(r"[\s-]+", "", regex=True)
+                .tolist()
             )
             lista_sap = doc_envios["Material"]
             lista_desc = doc_envios["Textobrevedematerial"]
@@ -115,36 +112,31 @@ def consultar_en_grf (usuario,contra,archivo):
             ruta = os.path.join(BASE_DIR, 'INGRESO', 'BOGOTA.xlsx')
             doc_envios = pd.read_excel(archivo)
             lista_seriales = (
-            doc_envios["Serial"]
-            .dropna()
-            .astype(str)
-            .str.replace(r"[\s-]+", "", regex=True)
-            .tolist()
+                doc_envios["Serial"]
+                .dropna()
+                .astype(str)
+                .str.replace(r"[\s-]+", "", regex=True)
+                .tolist()
             )
             lista_sap = doc_envios["Codigo material"]
             lista_desc = doc_envios["Descripción SAP"]
             lista_ciudad = doc_envios["Departamento"]
 
-
         casca = 0 
-        # Guardar resultados
         resultados = []
 
         for serial_number in lista_seriales:
             print("\n--- Procesando serial:", serial_number)
 
-            for intento in range(2):  # Máximo 2 intentos
+            for intento in range(2):
                 try:
-                    # Campo de búsqueda
                     campo_serial = wait.until(EC.presence_of_element_located((By.ID, "idSerialBuscar")))
                     campo_serial.clear()
                     campo_serial.send_keys(serial_number)
 
-                    # Click en buscar
                     buscar_link = wait.until(EC.element_to_be_clickable((By.ID, "btnInventarioBuscar")))
                     buscar_link.click()
 
-                    # Esperar a que cargue tabla o mensaje
                     WebDriverWait(driver, 30).until(
                         EC.any_of(
                             EC.presence_of_element_located((By.XPATH, "//td[contains(text(),'No hay resultados en la Base de Datos')]")),
@@ -152,7 +144,6 @@ def consultar_en_grf (usuario,contra,archivo):
                         )
                     )
 
-                    # Verificar si aparece "No hay resultados"
                     try:
                         driver.find_element(By.XPATH, "//td[contains(text(),'No hay resultados en la Base de Datos')]")
                         print(f"❌ No hay datos para el serial {serial_number}.")
@@ -160,12 +151,11 @@ def consultar_en_grf (usuario,contra,archivo):
                             "SERIAL_BUSCADO": serial_number,
                             "SAP": lista_sap[casca],
                             "DESCRIPCIÓN": lista_desc[casca],
-                            "CIUDAD":lista_ciudad[casca],
+                            "CIUDAD": lista_ciudad[casca],
                             "ESTADO": "NO_ENCONTRADO"
                         })
-                        casca +=1
+                        casca += 1
                     except:
-                        # Si no aparece el mensaje, hay datos
                         try:
                             fecha_span = wait.until(
                                 EC.presence_of_element_located((By.XPATH, "//span[contains(@id,'tablaFechaActualiza')]"))
@@ -184,7 +174,7 @@ def consultar_en_grf (usuario,contra,archivo):
                                 "SAP": lista_sap[casca],
                                 "DESCRIPCIÓN": lista_desc[casca],
                                 "ESTADO": "OK",
-                                "CIUDAD":lista_ciudad[casca]
+                                "CIUDAD": lista_ciudad[casca]
                             })
                             casca += 1
                         except (TimeoutException, StaleElementReferenceException):
@@ -194,10 +184,10 @@ def consultar_en_grf (usuario,contra,archivo):
                                 "SAP": lista_sap[casca],
                                 "DESCRIPCIÓN": lista_desc[casca],
                                 "ESTADO": "ERROR_DATOS",
-                                "CIUDAD":lista_ciudad[casca]
+                                "CIUDAD": lista_ciudad[casca]
                             })
                             casca += 1
-                    break  # si llegó aquí, salir del bucle de reintentos
+                    break
 
                 except (StaleElementReferenceException, TimeoutException) as e:
                     if intento == 0:
@@ -211,29 +201,24 @@ def consultar_en_grf (usuario,contra,archivo):
                             "SAP": lista_sap[casca],
                             "DESCRIPCIÓN": lista_desc[casca],
                             "ESTADO": "ERROR",
-                            "CIUDAD":lista_ciudad[casca]
+                            "CIUDAD": lista_ciudad[casca]
                         })
-                        casca +=1
+                        casca += 1
+                        
         df_resultados = pd.DataFrame(resultados)
-        
-        # 1. Método recomendado: Usar BytesIO para evitar guardar en disco
-        # Crea un búfer en memoria
         output = io.BytesIO()
-        # Guarda el excel en el búfer
         df_resultados.to_excel(output, index=False, engine='xlsxwriter')
-        # Mueve el cursor al inicio del búfer
         output.seek(0)
         
-# Devolver el buffer si todo fue exitoso
         return output
 
     except Exception as e:
         print(f"❌ ERROR CRÍTICO en consultar_en_grf: {e}")
-        # Si algo falla antes de generar el Excel, devuelve None
+        import traceback
+        traceback.print_exc()
         return None 
         
     finally:
-        # Esto asegura que el driver SIEMPRE se cierre, incluso si hay un error.
         if driver:
             print("Cerrando driver...")
             driver.quit()
