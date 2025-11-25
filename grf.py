@@ -9,10 +9,9 @@ import pandas as pd
 import time
 import os
 
-# Rutas seguras en Render cuando instalamos Chrome/Chromedriver con apt
+
 CHROME_BIN = "/opt/render/.local/bin/chrome/chrome-linux64/chrome"
 DRIVER_BIN = "/opt/render/.local/bin/chromedriver/chromedriver-linux64/chromedriver"
-
 
 
 def consultar_en_grf(usuario, contra, archivo):
@@ -21,22 +20,28 @@ def consultar_en_grf(usuario, contra, archivo):
     print(f"Chrome: {CHROME_BIN} existe? {os.path.exists(CHROME_BIN)}")
     print(f"Driver: {DRIVER_BIN} existe? {os.path.exists(DRIVER_BIN)}")
 
+    driver = None
+
     try:
         chrome_options = webdriver.ChromeOptions()
-
         chrome_options.binary_location = CHROME_BIN
 
-        # Modo headless optimizado para Render
+        # Config obligatoria en Render
+        chrome_options.add_argument("--headless=new")
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
         chrome_options.add_argument("--disable-gpu")
         chrome_options.add_argument("--disable-software-rasterizer")
-        chrome_options.add_argument("--headless=new")
-        chrome_options.add_argument("--disable-features=VizDisplayCompositor")
+        chrome_options.add_argument("--remote-debugging-port=9222")
         chrome_options.add_argument("--window-size=1280,720")
 
+        # Previene que Selenium busque un driver distinto
+        chrome_options.add_argument("--disable-browser-side-navigation")
+        chrome_options.add_argument("--ignore-certificate-errors")
+        chrome_options.add_argument("--allow-running-insecure-content")
 
         print("🚀 Inicializando ChromeDriver...")
+
         driver = webdriver.Chrome(
             service=Service(DRIVER_BIN),
             options=chrome_options
