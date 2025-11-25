@@ -10,8 +10,9 @@ import time
 import os
 
 # Rutas seguras en Render cuando instalamos Chrome/Chromedriver con apt
-CHROME_BIN = "/usr/bin/google-chrome"
-DRIVER_BIN = "/usr/local/bin/chromedriver"
+CHROME_BIN = "/opt/render/.local/bin/chrome/chrome-linux64/chrome"
+DRIVER_BIN = "/opt/render/.local/bin/chromedriver/chromedriver-linux64/chromedriver"
+
 
 
 def consultar_en_grf(usuario, contra, archivo):
@@ -26,15 +27,14 @@ def consultar_en_grf(usuario, contra, archivo):
         chrome_options.binary_location = CHROME_BIN
 
         # Modo headless optimizado para Render
-        chrome_options.add_argument("--headless=new")
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
         chrome_options.add_argument("--disable-gpu")
         chrome_options.add_argument("--disable-software-rasterizer")
-        chrome_options.add_argument("--disable-extensions")
-        chrome_options.add_argument("--disable-infobars")
-
+        chrome_options.add_argument("--headless=new")
+        chrome_options.add_argument("--disable-features=VizDisplayCompositor")
         chrome_options.add_argument("--window-size=1280,720")
+
 
         print("🚀 Inicializando ChromeDriver...")
         driver = webdriver.Chrome(
