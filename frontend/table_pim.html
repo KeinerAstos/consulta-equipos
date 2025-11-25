@@ -1,1 +1,66 @@
-frontend/dash_table.html
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tablero de Equipos</title>
+    <link rel="stylesheet" href="static/css/style_tablero.css">
+</head>
+
+<body>
+    <header>
+        <div class="logo">
+            <img src="{{ url_for('static', filename='Rake.jpg') }}" alt="Logo Rake">
+        </div>
+        <div id="inicio">
+            <a href="/dash_sap" class="btn">Inicio</a>
+        </div>
+        <div id="tablero">
+            <a href="/dash_table" class="btn">Tablero</a>
+        </div>
+        <div id="dashboard">
+            <a href="/dashboard" class="btn">Dashboard</a>
+        </div>
+        <a href="/logout" class="btn">Cerrar sesión</a>
+    </header>
+
+    <main>
+        {% for usuario, equipos in data.items() %}
+        <section class="tablero">
+            <h1>{{ usuario }}</h1>
+            <h3>Equipos Asignados</h3>
+
+            {% if equipos %}
+            <div class="table-container">
+                <table class="equipos-table">
+                    <thead>
+                        <tr>
+                            <th>SAP</th>
+                            <th>Descripción</th>
+                            <th>Serial</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for e in equipos %}
+                        <tr>
+                            <td>{{ e.sap }}</td>
+                            <td>{{ e.descripcion }}</td>
+                            <td>{{ e.serial }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="no-data">No tiene equipos asignados.</p>
+            {% endif %}
+        </section>
+        {% endfor %}
+    </main>
+
+
+
+</body>
+
+</html>
