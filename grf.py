@@ -12,10 +12,11 @@ import os
 from selenium.webdriver.chrome.options import Options 
 
 
-HOME = os.path.expanduser("~")
+HOME = "/opt/render/project/.local"
 
-CHROME_BIN = f"{HOME}/.local/bin/chrome/chrome-linux64/chrome"
-DRIVER_BIN = f"{HOME}/.local/bin/chromedriver/chromedriver-linux64/chromedriver"
+
+CHROME_BIN = "/opt/render/project/.local/bin/chrome/chrome-linux64/chrome"
+DRIVER_BIN = "/opt/render/project/.local/bin/chromedriver/chromedriver-linux64/chromedriver"
 
 def consultar_en_grf(usuario, contra, archivo):
     print("🔍 Verificando rutas de Chrome y ChromeDriver...")
