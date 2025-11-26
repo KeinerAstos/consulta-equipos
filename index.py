@@ -303,27 +303,50 @@ import grf # Asegúrate de importar tu módulo
 
 @app.route('/usuario_grf', methods=['POST'])
 def usuario_grf():
+    import sys
+    
     usuario = request.form['usuario']
     contra = request.form['contraseña']
     archivo = request.files['archivo']
     
+    # Leer el archivo para verificar tamaño y dar feedback
+    try:
+        df_temp = pd.read_excel(archivo)
+        num_seriales = len(df_temp)
+        
+        print(f"📊 Iniciando proceso con {num_seriales} seriales...")
+        print(f"⏱️ Tiempo estimado: {num_seriales * 15} segundos (~{num_seriales * 15 / 60:.1f} minutos)")
+        sys.stdout.flush()  # Fuerza que se imprima inmediatamente
+        
+        # Resetear el puntero del archivo después de leerlo
+        archivo.seek(0)
+        
+    except Exception as e:
+        print(f"⚠️ No se pudo leer el archivo: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': '❌ Error al leer el archivo. Verifica que sea un Excel válido.'
+        }), 400
+    
+    # Llamar a la función de scraping
     excel_buffer = grf.consultar_en_grf(usuario, contra, archivo)
 
-    # --- CAMBIO IMPORTANTE AQUÍ ---
+    # Verificar si se generó el archivo correctamente
     if excel_buffer is None or excel_buffer.getbuffer().nbytes == 0:
-        # Si no hay datos, devuelve un error JSON 
-        # y un código de estado 404 Not Found o 400 Bad Request
         print(f"❌ No se pudo generar el archivo para el usuario {usuario}")
         return jsonify({
             'status': 'error', 
-            'message': '❌ No se encontraron datos para los seriales proporcionados.'
-        }), 404 # Código de error HTTP 404
+            'message': '❌ No se encontraron datos o hubo un error en el proceso.'
+        }), 404
 
-    # Si hay datos, procede a enviar el archivo
+    # Si todo salió bien, enviar el archivo
+    print(f"✅ Archivo generado exitosamente para {usuario}")
+    sys.stdout.flush()
+    
     return send_file(
         excel_buffer,
         as_attachment=True,
-        download_name="resultados.xlsx", 
+        download_name=f"resultados_grf_{usuario}.xlsx", 
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
 
