@@ -116,7 +116,7 @@ def consultar_en_grf(usuario: str, contra: str, archivo) -> Optional[io.BytesIO]
         print("🚀 Inicializando ChromeDriver...")
         sys.stdout.flush()
         driver = crear_driver_local()
-        wait = WebDriverWait(driver, 60)  # ← CAMBIO: 30 → 60 segundos
+        wait = WebDriverWait(driver, 60)  # 60 segundos
 
         print("🌐 Abriendo página GRF...")
         sys.stdout.flush()
@@ -125,7 +125,7 @@ def consultar_en_grf(usuario: str, contra: str, archivo) -> Optional[io.BytesIO]
         print(f"🔐 Ingresando credenciales para usuario: {usuario}")
         sys.stdout.flush()
         
-        # ← CAMBIO: Usar wait.until y clear() antes de send_keys
+        # Usar wait.until y clear() antes de send_keys
         usuario_field = wait.until(EC.presence_of_element_located((By.NAME, "j_idt41")))
         usuario_field.clear()
         usuario_field.send_keys(usuario)
@@ -139,7 +139,7 @@ def consultar_en_grf(usuario: str, contra: str, archivo) -> Optional[io.BytesIO]
         btn_login = wait.until(EC.element_to_be_clickable((By.NAME, "j_idt47")))
         btn_login.click()
 
-        # ← CAMBIO: Agregar espera después del login
+        # Agregar espera después del login
         print("⏳ Esperando que cargue el dashboard (10 segundos)...")
         sys.stdout.flush()
         time.sleep(10)
@@ -147,7 +147,7 @@ def consultar_en_grf(usuario: str, contra: str, archivo) -> Optional[io.BytesIO]
         print("🔍 Buscando menú de inventario...")
         sys.stdout.flush()
         
-        # ← CAMBIO: Probar múltiples selectores
+        # Probar múltiples selectores
         menu_icon = None
         selectores = [
             ("CSS", "i.fa.fa-th-large"),
@@ -171,7 +171,6 @@ def consultar_en_grf(usuario: str, contra: str, archivo) -> Optional[io.BytesIO]
                 continue
         
         if not menu_icon:
-            # ← CAMBIO: Si no encuentra el menú, capturar info de debug
             print("❌ No se pudo encontrar el menú con ningún selector")
             print("📄 Primeros 1000 caracteres de la página:")
             print(driver.page_source[:1000])
@@ -181,25 +180,47 @@ def consultar_en_grf(usuario: str, contra: str, archivo) -> Optional[io.BytesIO]
         print("📋 Haciendo click en el menú...")
         sys.stdout.flush()
         menu_icon.click()
-        time.sleep(3)  # ← CAMBIO: Espera después del click
+        time.sleep(3)  # Espera después del click
 
         print("📂 Buscando link de Inventarios...")
         sys.stdout.flush()
         inventarios_link = wait.until(EC.element_to_be_clickable((By.ID, "irVistaInventarioMenu")))
         inventarios_link.click()
-        time.sleep(2)  # ← CAMBIO: Espera después del click
+        time.sleep(2)  # Espera después del click
 
         print("🔎 Buscando botón Consultar Inventario...")
         sys.stdout.flush()
         btn_consul = wait.until(EC.element_to_be_clickable((By.ID, "irVistaConsultaInventario")))
         btn_consul.click()
-        time.sleep(2)  # ← CAMBIO: Espera después del click
+        time.sleep(2)  # Espera después del click
 
         print("✅ Sesión iniciada correctamente")
         sys.stdout.flush()
         
-        # Configuración de tipo de consulta
-        stic = 2  # 1: NACIONALES, 2: BOGOTÁ
+        # Configuración de tipo de consulta (Se asume un estándar o se requiere una entrada)
+        # Para mantener la lógica de doc.py:
+        # stic = 2  # 1: NACIONALES, 2: BOGOTÁ
+        
+        # NOTA: En un entorno de servidor como Render, no se puede usar input(), 
+        # por lo que el parámetro 'archivo' debe implicar el tipo de consulta
+        # o se debe hardcodear uno de los tipos (por ejemplo, BOGOTÁ = 2).
+        # Aquí se mantiene la flexibilidad basada en la estructura del archivo.
+        
+        # Detección simple para simular 'stic' (se recomienda pasar 'stic' como argumento)
+        try:
+             # Leer las primeras filas y determinar si es "Serial" o "NºSerieFab"
+            df_temp = pd.read_excel(archivo, nrows=1)
+            if "Serial" in df_temp.columns and "Codigo material" in df_temp.columns:
+                stic = 2 # BOGOTÁ
+            elif "NºSerieFab" in df_temp.columns and "Material" in df_temp.columns:
+                stic = 1 # NACIONALES
+            else:
+                # Si no se detecta, asumir BOGOTÁ como en doc.py
+                print("⚠️ No se pudo determinar el tipo de consulta, asumiendo BOGOTÁ (stic=2).")
+                stic = 2
+        except Exception as e:
+            print(f"⚠️ Error al leer columnas para determinar stic: {e}. Asumiendo BOGOTÁ (stic=2).")
+            stic = 2
         
         # Cargar datos según tipo
         doc_envios = pd.read_excel(archivo)
@@ -213,7 +234,7 @@ def consultar_en_grf(usuario: str, contra: str, archivo) -> Optional[io.BytesIO]
                 .tolist()
             )
             lista_sap = doc_envios["Material"]
-            lista_desc = doc_envios["Textobrevedematerial"]
+            lista_desc = doc_envios["Texto breve de material"] # CAMBIO: Nombre de columna según doc.py
             lista_ciudad = doc_envios["Destino"]
         else:  # stic == 2
             lista_seriales = (
@@ -229,7 +250,7 @@ def consultar_en_grf(usuario: str, contra: str, archivo) -> Optional[io.BytesIO]
 
         total_seriales = len(lista_seriales)
         print(f"\n{'#'*70}")
-        print(f"📊 INICIANDO PROCESAMIENTO DE {total_seriales} SERIALES")
+        print(f"📊 INICIANDO PROCESAMIENTO DE {total_seriales} SERIALES (TIPO: {'NACIONALES' if stic == 1 else 'BOGOTÁ'})")
         print(f"⏱️  Tiempo estimado total: ~{(total_seriales * 10) / 60:.1f} minutos")
         print(f"{'#'*70}\n")
         sys.stdout.flush()
@@ -237,7 +258,24 @@ def consultar_en_grf(usuario: str, contra: str, archivo) -> Optional[io.BytesIO]
         resultados = []
 
         # Procesar cada serial
-        for idx, serial_number in enumerate(lista_seriales, start=1):
+        for idx, serial_number_raw in enumerate(lista_seriales, start=1):
+            
+            # Limpiar serial_number
+            serial_number = str(serial_number_raw).strip()
+            
+            # Manejar serial vacío/invalido (Añadido)
+            if not serial_number:
+                imprimir_progreso(idx, total_seriales, serial_number_raw, "SERIAL VACÍO")
+                resultados.append({
+                    "SERIAL_BUSCADO": serial_number_raw,
+                    "SAP": lista_sap[idx-1],
+                    "DESCRIPCIÓN": lista_desc[idx-1],
+                    "CIUDAD": lista_ciudad[idx-1],
+                    "ESTADO": "VACÍO",
+                    "BODEGA_GRF": "N/A" # CAMBIO: Añadir columna
+                })
+                continue
+                
             # Mostrar progreso cada 10 seriales o en el primero/último
             if idx % 10 == 0 or idx == 1 or idx == total_seriales:
                 imprimir_progreso(idx, total_seriales, serial_number, "Procesando...")
@@ -269,20 +307,27 @@ def consultar_en_grf(usuario: str, contra: str, archivo) -> Optional[io.BytesIO]
                             "SAP": lista_sap[idx-1],
                             "DESCRIPCIÓN": lista_desc[idx-1],
                             "CIUDAD": lista_ciudad[idx-1],
-                            "ESTADO": "NO_ENCONTRADO"
+                            "ESTADO": "NO_ENCONTRADO",
+                            "BODEGA_GRF": "N/A" # CAMBIO: Añadir columna
                         })
                     except:
                         # Serial encontrado
                         try:
+                            # CAMBIO: Extracción de bodega, crucial para la funcionalidad de doc.py
                             serial_span = wait.until(
                                 EC.presence_of_element_located((By.XPATH, "//span[contains(@id,'tablaInventarioTecnicoSerial')]"))
                             )
-                            serial_found = serial_span.get_attribute("textContent").strip()
-                            
+                            # serial_found = serial_span.get_attribute("textContent").strip() # No se usa en el resultado final, pero se puede mantener
+
                             fecha_span = wait.until(
                                 EC.presence_of_element_located((By.XPATH, "//span[contains(@id,'tablaFechaActualiza')]"))
                             )
                             fecha_actualizacion = fecha_span.get_attribute("textContent").strip()
+                            
+                            bodega_span = wait.until(
+                                EC.presence_of_element_located((By.XPATH, "//span[contains(@id,'tablaInventarioBodega')]"))
+                            )
+                            bodega_found = bodega_span.get_attribute("textContent").strip()
 
                             resultados.append({
                                 "SERIAL_BUSCADO": serial_number,
@@ -290,7 +335,8 @@ def consultar_en_grf(usuario: str, contra: str, archivo) -> Optional[io.BytesIO]
                                 "DESCRIPCIÓN": lista_desc[idx-1],
                                 "ESTADO": "OK",
                                 "CIUDAD": lista_ciudad[idx-1],
-                                "FECHA_ACTUALIZACION": fecha_actualizacion
+                                "FECHA_ACTUALIZACION": fecha_actualizacion,
+                                "BODEGA_GRF": bodega_found # CAMBIO: Añadir columna
                             })
                         except (TimeoutException, StaleElementReferenceException):
                             resultados.append({
@@ -298,7 +344,8 @@ def consultar_en_grf(usuario: str, contra: str, archivo) -> Optional[io.BytesIO]
                                 "SAP": lista_sap[idx-1],
                                 "DESCRIPCIÓN": lista_desc[idx-1],
                                 "ESTADO": "ERROR_DATOS",
-                                "CIUDAD": lista_ciudad[idx-1]
+                                "CIUDAD": lista_ciudad[idx-1],
+                                "BODEGA_GRF": "N/A" # CAMBIO: Añadir columna
                             })
                     break
 
@@ -316,7 +363,8 @@ def consultar_en_grf(usuario: str, contra: str, archivo) -> Optional[io.BytesIO]
                             "SAP": lista_sap[idx-1],
                             "DESCRIPCIÓN": lista_desc[idx-1],
                             "ESTADO": "ERROR",
-                            "CIUDAD": lista_ciudad[idx-1]
+                            "CIUDAD": lista_ciudad[idx-1],
+                            "BODEGA_GRF": "N/A" # CAMBIO: Añadir columna
                         })
                         
         # Generar Excel de resultados
