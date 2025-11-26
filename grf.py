@@ -15,6 +15,7 @@ from selenium.common.exceptions import (
 )
 from selenium.webdriver.chrome.options import Options
 
+
 def crear_driver_browserless() -> webdriver.Remote:
     """
     Crea un driver remoto de Chrome usando Browserless.
@@ -63,8 +64,8 @@ def crear_driver_browserless() -> webdriver.Remote:
     chrome_options.add_argument("--ignore-certificate-errors")
     chrome_options.add_argument("--allow-running-insecure-content")
     
-    # 🔹 URL correcta moderna de Browserless
-    command_executor_url = f"https://production-sfo.browserless.io/webdriver?token={browserless_token}"
+    # URL correcta (no legacy)
+    command_executor_url = f"https://chrome.browserless.io/webdriver?token={browserless_token}"
     
     print(f"🌐 Conectando a Browserless...")
     
@@ -86,7 +87,7 @@ def crear_driver_browserless() -> webdriver.Remote:
         if "legacy" in error_msg.lower():
             raise WebDriverException(
                 "❌ Error: Estás usando un endpoint legacy. "
-                "Verifica que la URL sea: https://production-sfo.browserless.io/webdriver"
+                "Verifica que la URL sea: https://chrome.browserless.io/webdriver"
             )
         elif "unauthorized" in error_msg.lower() or "401" in error_msg:
             raise WebDriverException(
