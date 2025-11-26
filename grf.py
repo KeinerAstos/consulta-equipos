@@ -6,35 +6,41 @@ from typing import Optional
 import pandas as pd
 from selenium import webdriver
 from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import (StaleElementReferenceException, 
+from selenium.common.exceptions import (
+    StaleElementReferenceException, 
     TimeoutException,
     WebDriverException
 )
 from selenium.webdriver.chrome.options import Options
 
+# Rutas de Chrome y ChromeDriver en Render
+BASE_CHROME_DIR = "/opt/render/project/src/.chrome"
+CHROME_BIN = f"{BASE_CHROME_DIR}/chrome-linux64/chrome"
+DRIVER_BIN = f"{BASE_CHROME_DIR}/chromedriver-linux64/chromedriver"
 
-def crear_driver_browserless() -> webdriver.Remote:
+
+def crear_driver_local() -> webdriver.Chrome:
     """
-    Crea un driver remoto de Chrome usando Browserless con Selenium 4.
-    Totalmente compatible con Render.
+    Crea un driver local de Chrome en Render.
     """
-
-    browserless_token = os.getenv("BROWSERLESS_TOKEN")
-    if not browserless_token:
-        raise ValueError("❌ BROWSERLESS_TOKEN no está configurado.")
-
-    print(f"✅ Token de Browserless detectado: {browserless_token[:8]}...")
-
-    # Endpoint nuevo (no legacy)
-    command_executor_url = (
-        f"https://production-sfo.browserless.io/webdriver?token={browserless_token}"
-    )
-
-    chrome_options = webdriver.ChromeOptions()
-
-    # Headless moderno
+    print("🔍 Verificando instalación de Chrome...")
+    print(f"Chrome Binary: {CHROME_BIN}")
+    print(f"ChromeDriver: {DRIVER_BIN}")
+    print(f"Chrome existe: {os.path.exists(CHROME_BIN)}")
+    print(f"Driver existe: {os.path.exists(DRIVER_BIN)}")
+    
+    if not os.path.exists(CHROME_BIN):
+        raise FileNotFoundError(f"❌ Chrome no encontrado en: {CHROME_BIN}")
+    
+    if not os.path.exists(DRIVER_BIN):
+        raise FileNotFoundError(f"❌ ChromeDriver no encontrado en: {DRIVER_BIN}")
+    
+    chrome_options = Options()
+    
+    # Configuración headless y seguridad
     chrome_options.add_argument("--headless=new")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
@@ -43,54 +49,45 @@ def crear_driver_browserless() -> webdriver.Remote:
     chrome_options.add_argument("--disable-software-rasterizer")
     chrome_options.add_argument("--disable-extensions")
     chrome_options.add_argument("--disable-infobars")
-
-    # Anti detección
+    chrome_options.add_argument("--remote-debugging-port=9222")
+    
+    # Anti-detección
     chrome_options.add_argument("--disable-blink-features=AutomationControlled")
     chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
     chrome_options.add_experimental_option("useAutomationExtension", False)
-
+    
     # SSL
     chrome_options.add_argument("--ignore-certificate-errors")
-
-    # **IMPORTANTE: Selenium 4 usa set_capability en lugar de desired_capabilities**
-    chrome_options.set_capability("browserName", "chrome")
-    chrome_options.set_capability("browserless:token", browserless_token)
-
-    print("🌐 Conectando a Browserless...")
-
+    
+    # Ruta del binario de Chrome
+    chrome_options.binary_location = CHROME_BIN
+    
+    print("🚀 Inicializando ChromeDriver local...")
+    
     try:
-        driver = webdriver.Remote(
-            command_executor=command_executor_url,
-            options=chrome_options
-        )
-
+        service = Service(DRIVER_BIN)
+        driver = webdriver.Chrome(service=service, options=chrome_options)
         driver.set_page_load_timeout(60)
         driver.implicitly_wait(10)
-
-        print("✅ Driver Browserless creado con éxito")
-        return driver
-
-    except Exception as e:
-        raise WebDriverException(f"❌ Error creando driver Browserless: {str(e)}")
-
-
-def consultar_en_grf(usuario: str, contra: str, archivo: str) -> Optional[io.BytesIO]:
-    """
-    Automatiza consultas en el sistema GRF usando Selenium y Browserless.
-    
-    Args:
-        usuario: Usuario para login
-        contra: Contraseña para login
-        archivo: Ruta del archivo Excel con datos de entrada
         
-    Returns:
-        BytesIO con archivo Excel de resultados, o None si hay error
+        print("✅ Driver Chrome creado con éxito")
+        return driver
+        
+    except Exception as e:
+        print(f"❌ Error creando driver: {str(e)}")
+        traceback.print_exc()
+        raise
+
+
+def consultar_en_grf(usuario: str, contra: str, archivo) -> Optional[io.BytesIO]:
+    """
+    Automatiza consultas en el sistema GRF usando Selenium.
     """
     driver = None
     
     try:
-        print("🚀 Inicializando Browserless ChromeDriver...")
-        driver = crear_driver_browserless()
+        print("🚀 Inicializando ChromeDriver...")
+        driver = crear_driver_local()
         wait = WebDriverWait(driver, 30)
 
         print("🌐 Abriendo página GRF...")
@@ -118,7 +115,6 @@ def consultar_en_grf(usuario: str, contra: str, archivo: str) -> Optional[io.Byt
         
         # Configuración de tipo de consulta
         stic = 2  # 1: NACIONALES, 2: BOGOTÁ
-        BASE_DIR = os.path.dirname(os.path.abspath(__file__))
         
         # Cargar datos según tipo
         doc_envios = pd.read_excel(archivo)
@@ -151,7 +147,7 @@ def consultar_en_grf(usuario: str, contra: str, archivo: str) -> Optional[io.Byt
 
         # Procesar cada serial
         for idx, serial_number in enumerate(lista_seriales):
-            print(f"\n[{idx+1}/{len(lista_seriales)}] Procesando serial: {serial_number}")
+            print(f"\n[{idx+1}/{len(lista_seriales)}] Procesando: {serial_number}")
 
             for intento in range(2):
                 try:
@@ -175,7 +171,7 @@ def consultar_en_grf(usuario: str, contra: str, archivo: str) -> Optional[io.Byt
                     # Verificar si no hay resultados
                     try:
                         driver.find_element(By.XPATH, "//td[contains(text(),'No hay resultados en la Base de Datos')]")
-                        print(f"⚠️  Serial {serial_number} no encontrado en BD")
+                        print(f"⚠️  No encontrado en BD")
                         resultados.append({
                             "SERIAL_BUSCADO": serial_number,
                             "SAP": lista_sap[idx],
@@ -196,7 +192,7 @@ def consultar_en_grf(usuario: str, contra: str, archivo: str) -> Optional[io.Byt
                             )
                             fecha_actualizacion = fecha_span.get_attribute("textContent").strip()
 
-                            print(f"✅ Serial {serial_found} encontrado - Fecha: {fecha_actualizacion}")
+                            print(f"✅ Encontrado - Fecha: {fecha_actualizacion}")
 
                             resultados.append({
                                 "SERIAL_BUSCADO": serial_number,
@@ -207,7 +203,7 @@ def consultar_en_grf(usuario: str, contra: str, archivo: str) -> Optional[io.Byt
                                 "FECHA_ACTUALIZACION": fecha_actualizacion
                             })
                         except (TimeoutException, StaleElementReferenceException):
-                            print(f"⚠️  Error obteniendo datos para {serial_number}")
+                            print(f"⚠️  Error obteniendo datos")
                             resultados.append({
                                 "SERIAL_BUSCADO": serial_number,
                                 "SAP": lista_sap[idx],
@@ -219,11 +215,11 @@ def consultar_en_grf(usuario: str, contra: str, archivo: str) -> Optional[io.Byt
 
                 except (StaleElementReferenceException, TimeoutException) as e:
                     if intento == 0:
-                        print(f"🔄 Reintentando serial {serial_number}...")
+                        print(f"🔄 Reintentando...")
                         time.sleep(2)
                         continue
                     else:
-                        print(f"❌ Fallo definitivo para {serial_number}: {type(e).__name__}")
+                        print(f"❌ Fallo definitivo")
                         resultados.append({
                             "SERIAL_BUSCADO": serial_number,
                             "SAP": lista_sap[idx],
@@ -239,11 +235,11 @@ def consultar_en_grf(usuario: str, contra: str, archivo: str) -> Optional[io.Byt
         df_resultados.to_excel(output, index=False, engine='xlsxwriter')
         output.seek(0)
         
-        print(f"✅ Proceso completado: {len(resultados)} registros procesados")
+        print(f"✅ Completado: {len(resultados)} registros procesados")
         return output
 
     except Exception as e:
-        print(f"❌ ERROR CRÍTICO en consultar_en_grf: {e}")
+        print(f"❌ ERROR CRÍTICO: {e}")
         traceback.print_exc()
         return None 
         
@@ -254,24 +250,3 @@ def consultar_en_grf(usuario: str, contra: str, archivo: str) -> Optional[io.Byt
                 driver.quit()
             except:
                 pass
-
-
-# Para testing local
-if __name__ == "__main__":
-    # Verificar configuración
-    token = os.getenv("BROWSERLESS_TOKEN")
-    if token:
-        print(f"✅ BROWSERLESS_TOKEN configurado: {token[:8]}...")
-    else:
-        print("❌ BROWSERLESS_TOKEN NO configurado")
-        print("💡 Configúralo con: export BROWSERLESS_TOKEN='tu_token'")
-    
-    # Opcional: test de conexión básico
-    try:
-        print("\n🧪 Probando conexión a Browserless...")
-        driver = crear_driver_browserless()
-        driver.get("https://www.google.com")
-        print(f"✅ Título de página: {driver.title}")
-        driver.quit()
-    except Exception as e:
-        print(f"❌ Error en test: {e}")
