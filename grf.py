@@ -93,8 +93,7 @@ def imprimir_progreso(actual, total, serial, estado):
     barra_completa = int((actual / total) * barra_longitud)
     barra = "█" * barra_completa + "░" * (barra_longitud - barra_completa)
     
-    # Calcular tiempo estimado restante
-    # Asumiendo ~10 segundos por serial
+    # Calcular tiempo estimado restante (10 segundos por serial)
     seriales_restantes = total - actual
     tiempo_restante_min = (seriales_restantes * 10) / 60
     
@@ -117,32 +116,84 @@ def consultar_en_grf(usuario: str, contra: str, archivo) -> Optional[io.BytesIO]
         print("🚀 Inicializando ChromeDriver...")
         sys.stdout.flush()
         driver = crear_driver_local()
-        wait = WebDriverWait(driver, 30)
+        wait = WebDriverWait(driver, 60)  # ← CAMBIO: 30 → 60 segundos
 
         print("🌐 Abriendo página GRF...")
         sys.stdout.flush()
         driver.get("https://grf.claro.com.co:8202/GIT-web/")
 
-        print("🔐 Ingresando credenciales...")
+        print(f"🔐 Ingresando credenciales para usuario: {usuario}")
         sys.stdout.flush()
-        driver.find_element(By.NAME, "j_idt41").send_keys(usuario)
-        driver.find_element(By.NAME, "j_idt43").send_keys(contra)
+        
+        # ← CAMBIO: Usar wait.until y clear() antes de send_keys
+        usuario_field = wait.until(EC.presence_of_element_located((By.NAME, "j_idt41")))
+        usuario_field.clear()
+        usuario_field.send_keys(usuario)
+        
+        contra_field = wait.until(EC.presence_of_element_located((By.NAME, "j_idt43")))
+        contra_field.clear()
+        contra_field.send_keys(contra)
 
         print("👆 Haciendo login...")
         sys.stdout.flush()
         btn_login = wait.until(EC.element_to_be_clickable((By.NAME, "j_idt47")))
         btn_login.click()
 
-        print("📋 Navegando a Inventario...")
+        # ← CAMBIO: Agregar espera después del login
+        print("⏳ Esperando que cargue el dashboard (10 segundos)...")
         sys.stdout.flush()
-        menu_icon = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "i.fa.fa-th-large")))
-        menu_icon.click()
+        time.sleep(10)
 
+        print("🔍 Buscando menú de inventario...")
+        sys.stdout.flush()
+        
+        # ← CAMBIO: Probar múltiples selectores
+        menu_icon = None
+        selectores = [
+            ("CSS", "i.fa.fa-th-large"),
+            ("XPATH", "//i[contains(@class, 'fa-th-large')]"),
+            ("XPATH", "//i[@class='fa fa-th-large']"),
+            ("CSS", ".fa.fa-th-large")
+        ]
+        
+        for tipo, selector in selectores:
+            try:
+                if tipo == "CSS":
+                    menu_icon = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, selector)))
+                else:
+                    menu_icon = wait.until(EC.element_to_be_clickable((By.XPATH, selector)))
+                print(f"✅ Menú encontrado con selector {tipo}: {selector}")
+                sys.stdout.flush()
+                break
+            except TimeoutException:
+                print(f"❌ No se encontró con {tipo}: {selector}")
+                sys.stdout.flush()
+                continue
+        
+        if not menu_icon:
+            # ← CAMBIO: Si no encuentra el menú, capturar info de debug
+            print("❌ No se pudo encontrar el menú con ningún selector")
+            print("📄 Primeros 1000 caracteres de la página:")
+            print(driver.page_source[:1000])
+            sys.stdout.flush()
+            raise Exception("No se encontró el menú de inventario. Posible error de login.")
+
+        print("📋 Haciendo click en el menú...")
+        sys.stdout.flush()
+        menu_icon.click()
+        time.sleep(3)  # ← CAMBIO: Espera después del click
+
+        print("📂 Buscando link de Inventarios...")
+        sys.stdout.flush()
         inventarios_link = wait.until(EC.element_to_be_clickable((By.ID, "irVistaInventarioMenu")))
         inventarios_link.click()
+        time.sleep(2)  # ← CAMBIO: Espera después del click
 
+        print("🔎 Buscando botón Consultar Inventario...")
+        sys.stdout.flush()
         btn_consul = wait.until(EC.element_to_be_clickable((By.ID, "irVistaConsultaInventario")))
         btn_consul.click()
+        time.sleep(2)  # ← CAMBIO: Espera después del click
 
         print("✅ Sesión iniciada correctamente")
         sys.stdout.flush()
