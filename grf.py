@@ -65,15 +65,25 @@ def crear_driver_browserless() -> webdriver.Remote:
     chrome_options.add_argument("--allow-running-insecure-content")
     
     # URL correcta (no legacy)
-    command_executor_url = f"https://chrome.browserless.io/webdriver?token={browserless_token}"
-    
+    command_executor_url = (
+    f"https://production-sfo.browserless.io/webdriver?"
+    f"token={browserless_token}"
+)
+
     print(f"🌐 Conectando a Browserless...")
     
     try:
+        caps = {
+            "browserName": "chrome",
+            "browserless:token": browserless_token
+        }
+
         driver = webdriver.Remote(
             command_executor=command_executor_url,
-            options=chrome_options
+            options=chrome_options,
+            desired_capabilities=caps
         )
+
         
         # Configurar timeouts
         driver.set_page_load_timeout(60)
