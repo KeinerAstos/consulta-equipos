@@ -46,12 +46,13 @@ def consultar_en_grf(usuario, contra, archivo):
     try:
         print("🌐 Abriendo página...")
         driver.get("https://grf.claro.com.co:8202/GIT-web/")
-
+#46250702
+#Marzo026**
         print("Ingresando usuario...")
-        driver.find_element(By.NAME, "j_idt41").send_keys("46250702")
+        driver.find_element(By.NAME, "j_idt41").send_keys(usuario)
         
         print("Ingresando contraseña...")
-        driver.find_element(By.NAME, "j_idt43").send_keys("Marzo026**")
+        driver.find_element(By.NAME, "j_idt43").send_keys(contra)
 
         print("Dando click en login...")
         btn_login = wait.until(EC.element_to_be_clickable((By.NAME, "j_idt47")))
