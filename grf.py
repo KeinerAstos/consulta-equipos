@@ -9,16 +9,11 @@ import time
 import os
 from selenium.webdriver.chrome.options import Options
 
-
-
-# -----------------------------
-# Función para crear driver con Browserless
-# -----------------------------
 def crear_driver_browserless():
     chrome_options = Options()
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.add_argument("--headless=new")  # headless moderno
+    chrome_options.add_argument("--headless=new")
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--disable-software-rasterizer")
     chrome_options.add_argument("--window-size=1280,720")
@@ -26,16 +21,16 @@ def crear_driver_browserless():
     chrome_options.add_argument("--ignore-certificate-errors")
     chrome_options.add_argument("--allow-running-insecure-content")
 
-    # 🔑 URL correcta para Selenium + Browserless
     browserless_token = os.getenv("BROWSERLESS_TOKEN")
-    command_executor_url = f"wss://production-sfo.browserless.io?token={browserless_token}"
+    # 🔹 URL HTTPS correcta para Selenium
+    command_executor_url = f"https://chrome.browserless.io/webdriver?token={browserless_token}"
 
     driver = webdriver.Remote(
         command_executor=command_executor_url,
         options=chrome_options
     )
-
     return driver
+
 # -----------------------------
 # Función principal
 # -----------------------------
