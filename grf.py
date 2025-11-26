@@ -8,8 +8,7 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import (
-    StaleElementReferenceException, 
+from selenium.common.exceptions import (StaleElementReferenceException, 
     TimeoutException,
     WebDriverException
 )
@@ -18,93 +17,61 @@ from selenium.webdriver.chrome.options import Options
 
 def crear_driver_browserless() -> webdriver.Remote:
     """
-    Crea un driver remoto de Chrome usando Browserless.
-    Configurado específicamente para Render.
-    
-    Returns:
-        webdriver.Remote: Instancia del driver configurado
-        
-    Raises:
-        ValueError: Si no se encuentra el token de Browserless
-        WebDriverException: Si falla la conexión con Browserless
+    Crea un driver remoto de Chrome usando Browserless con Selenium 4.
+    Totalmente compatible con Render.
     """
-    # Validar que existe el token
+
     browserless_token = os.getenv("BROWSERLESS_TOKEN")
     if not browserless_token:
-        raise ValueError(
-            "❌ BROWSERLESS_TOKEN no está configurado. "
-            "Configúralo en Render Dashboard > Environment > Add Environment Variable"
-        )
-    
+        raise ValueError("❌ BROWSERLESS_TOKEN no está configurado.")
+
     print(f"✅ Token de Browserless detectado: {browserless_token[:8]}...")
-    
-    # Opciones de Chrome optimizadas para entorno remoto
-    chrome_options = Options()
-    
-    # Opciones esenciales para headless
+
+    # Endpoint nuevo (no legacy)
+    command_executor_url = (
+        f"https://production-sfo.browserless.io/webdriver?token={browserless_token}"
+    )
+
+    chrome_options = webdriver.ChromeOptions()
+
+    # Headless moderno
     chrome_options.add_argument("--headless=new")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
-    
-    # Optimizaciones de rendimiento
+    chrome_options.add_argument("--window-size=1920,1080")
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--disable-software-rasterizer")
     chrome_options.add_argument("--disable-extensions")
     chrome_options.add_argument("--disable-infobars")
-    
-    # Configuración de ventana
-    chrome_options.add_argument("--window-size=1920,1080")
-    
-    # Anti-detección
+
+    # Anti detección
     chrome_options.add_argument("--disable-blink-features=AutomationControlled")
     chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
-    chrome_options.add_experimental_option('useAutomationExtension', False)
-    
-    # Manejo de certificados SSL
+    chrome_options.add_experimental_option("useAutomationExtension", False)
+
+    # SSL
     chrome_options.add_argument("--ignore-certificate-errors")
-    chrome_options.add_argument("--allow-running-insecure-content")
-    
-    # URL correcta (no legacy)
-    command_executor_url = (
-    f"https://production-sfo.browserless.io/webdriver?"
-    f"token={browserless_token}"
-)
 
-    print(f"🌐 Conectando a Browserless...")
-    
+    # **IMPORTANTE: Selenium 4 usa set_capability en lugar de desired_capabilities**
+    chrome_options.set_capability("browserName", "chrome")
+    chrome_options.set_capability("browserless:token", browserless_token)
+
+    print("🌐 Conectando a Browserless...")
+
     try:
-        caps = {
-            "browserName": "chrome",
-            "browserless:token": browserless_token
-        }
-
         driver = webdriver.Remote(
             command_executor=command_executor_url,
-            options=chrome_options,
-            desired_capabilities=caps
+            options=chrome_options
         )
 
-        
-        # Configurar timeouts
         driver.set_page_load_timeout(60)
         driver.implicitly_wait(10)
-        
-        print("✅ Driver de Browserless creado exitosamente")
+
+        print("✅ Driver Browserless creado con éxito")
         return driver
-        
-    except WebDriverException as e:
-        error_msg = str(e)
-        if "legacy" in error_msg.lower():
-            raise WebDriverException(
-                "❌ Error: Estás usando un endpoint legacy. "
-                "Verifica que la URL sea: https://chrome.browserless.io/webdriver"
-            )
-        elif "unauthorized" in error_msg.lower() or "401" in error_msg:
-            raise WebDriverException(
-                "❌ Error de autenticación. Verifica que BROWSERLESS_TOKEN sea válido."
-            )
-        else:
-            raise WebDriverException(f"❌ Error conectando a Browserless: {error_msg}")
+
+    except Exception as e:
+        raise WebDriverException(f"❌ Error creando driver Browserless: {str(e)}")
 
 
 def consultar_en_grf(usuario: str, contra: str, archivo: str) -> Optional[io.BytesIO]:
