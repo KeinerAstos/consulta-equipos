@@ -38,10 +38,13 @@ for df in [doc_entregas, doc_devoluciones, doc_salidas, doc_entradas,doc_stock]:
         df["Serial"] = df["Serial"].astype(str).str.strip()
 doc_envios["NºSerieFab"] = doc_envios["NºSerieFab"].astype(str).str.strip()
 
+# Conversión segura de columnas tipo fecha
 for df in [doc_entregas, doc_devoluciones, doc_salidas, doc_entradas]:
     for col in df.columns:
-        if "Fecha" in col or "fecha" in col:
+        col_str = str(col).lower()
+        if "fecha" in col_str:
             df[col] = pd.to_datetime(df[col], errors="coerce")
+
 # === FUNCIÓN AUXILIAR PARA CONSULTAR DATOS ===
 def obtener_asignaciones():
     conn = get_connection()
