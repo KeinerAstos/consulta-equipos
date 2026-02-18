@@ -40,6 +40,11 @@ Días_en_Reserva = []
 
 numero = 0
 
+doc_aliados["Fecha"] = pd.to_datetime(
+    doc_aliados["Fecha"],
+    errors="coerce"
+).dt.strftime("%d/%m/%Y")
+
 for i in range(len(doc_inventario['Serial1'])):
     serial = doc_inventario['Serial1'].iloc[i]
 
