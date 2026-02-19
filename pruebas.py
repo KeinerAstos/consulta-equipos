@@ -8,9 +8,11 @@ from psycopg2 import errors
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ruta = os.path.join(BASE_DIR, 'datos', 'Inventario_(19).xlsx')
 ruta_envio = os.path.join(BASE_DIR,'datos','ENVIO(7).xlsx')
+ruta_re = os.path.join(BASE_DIR,'datos','reasignacion.xlsx')
 
 doc_inventario = pd.read_excel(ruta, sheet_name='Inventario')
 doc_aliados = pd.read_excel(ruta_envio, sheet_name="DESPACHO ALIADOS 2026")
+doc_reasignado = pd.read_excel(ruta_re, sheet_name="Hoja1")
 
 doc_aliados['NºSerieFab'] = doc_aliados['NºSerieFab'].astype(str).str.strip()
 doc_inventario['Serial1'] = doc_inventario['Serial1'].astype(str).str.strip()
@@ -44,6 +46,12 @@ doc_aliados["Fecha"] = pd.to_datetime(
     doc_aliados["Fecha"],
     errors="coerce"
 ).dt.strftime("%d/%m/%Y")
+
+doc_inventario['FechaOrden'] = pd.to_datetime(
+    doc_inventario['FechaOrden'],
+    errors="coerce"
+).dt.strftime("%d/%m/%Y")
+
 
 for i in range(len(doc_inventario['Serial1'])):
     serial = doc_inventario['Serial1'].iloc[i]
@@ -100,9 +108,6 @@ for i in range(len(doc_inventario['Serial1'])):
     Asignado.append('N/A')
     Fecha_de_reporte.append('17/02/2026')
 
-
-registros = []
-
 resultado = pd.DataFrame({
     "OTP": OTP,
     "OTH": OTH,
@@ -125,6 +130,23 @@ resultado = pd.DataFrame({
     "Fecha de reporte": Fecha_de_reporte,
     "Fecha de ingreso": Fecha_de_ingreso
 })
+
+doc_reasignado['FECHA_CAMBIO'] = pd.to_datetime(
+    doc_reasignado['FECHA_CAMBIO'],
+    errors="coerce"
+).dt.strftime("%d/%m/%Y")
+
+for i in range (len(doc_reasignado)):
+    for x in range(len(resultado)):
+        if doc_reasignado["SERIAL"].iloc[i] in resultado["SERIAL"].iloc[x]:
+            resultado.loc[x, "OTP"] = doc_reasignado["OTP NUEVA"].iloc[i]
+            resultado.loc[x, "CLIENTE"] = doc_reasignado["NUEVO_CLIENTE"].iloc[i]
+            resultado.loc[x, "Fecha cambio de estatus"] = doc_reasignado["FECHA_CAMBIO"].iloc[i]
+            resultado.loc[x, "Tipo_de_OT"] = "INSTALACIONES"
+            resultado.loc[x, "Estatus"] = "REASIGNADO"
+            resultado.loc[x,"ALMACEN"] = "Q500"
+
+
 
 resultado.to_excel("resultado_final.xlsx", index=False)
 
