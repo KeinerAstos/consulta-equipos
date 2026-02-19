@@ -1,5 +1,6 @@
 # Ignorar todos los Excel dentro de datos
 datos/*.xlsx
+pruebas.py
 
 # Exceptuar SISTEM.xlsx
 !datos/SISTEM.xlsx
