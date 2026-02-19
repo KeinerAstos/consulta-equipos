@@ -1,0 +1,5 @@
+# Ignorar todos los Excel dentro de datos
+datos/*.xlsx
+
+# Exceptuar SISTEM.xlsx
+!datos/SISTEM.xlsx
