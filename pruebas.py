@@ -25,28 +25,103 @@ doc_movimiento['Serial1'] = doc_movimiento['Serial1'].astype(str).str.strip()
 # Ordenar por fecha (muy importante)
 doc_movimiento = doc_movimiento.sort_values(by='FechaMovimiento')
 
-# Tomar el último movimiento de cada serial
-ultimos_movimientos = doc_movimiento.groupby('Serial1').last().reset_index()
+# ===============================
+# LIMPIEZA GENERAL
+# ===============================
 
-# Filtrar los que siguen en bodega
-en_bodega = ultimos_movimientos[
-    ultimos_movimientos['TipoMovimiento'] != "SALIDA"
-]
+# Limpiar nombres de columnas (quita espacios invisibles)
+doc_movimiento.columns = doc_movimiento.columns.str.strip()
 
-print("Seriales que siguen en bodega:")
-print(en_bodega[['Serial1', 'FechaMovimiento']])
+doc_movimiento['Serial1'] = (
+    doc_movimiento['Serial1']
+    .replace(['nan', 'NaN', '', '#N/D', '#N/A'], 'N/A')
+)
 
-resultado = pd.DataFrame({
-    "SERIAL": en_bodega['Serial1'],
-    "FECHA": en_bodega['FechaMovimiento'],
-    "SAP": en_bodega['NumeroParte'],
-    "DESCRIPCION": en_bodega['NombreParte'],
-    "CANTIDAD": en_bodega['Cantidad']
+doc_inventario['Serial1'] = (
+    doc_inventario['Serial1']
+    .replace(['nan', 'NaN', '', '#N/D', '#N/A'], 'N/A')
+)
+
+
+# Normalizar tipo movimiento
+doc_movimiento['TipoMovimiento'] = (
+    doc_movimiento['TipoMovimiento']
+    .astype(str)
+    .str.strip()
+    .str.upper()
+)
+
+# Ordenar por fecha
+doc_movimiento = doc_movimiento.sort_values(by='FechaMovimiento')
+
+
+# ===============================
+# FILTRAR SOLO INGRESO Y SALIDA
+# ===============================
+
+movimientos_validos = doc_movimiento[
+    doc_movimiento['TipoMovimiento'].isin(['INGRESO', 'SALIDA'])
+].copy()
+
+# Crear signo matemático
+movimientos_validos['Signo'] = movimientos_validos['TipoMovimiento'].map({
+    'INGRESO': 1,
+    'SALIDA': -1
 })
+
+
+# ===============================
+# CALCULAR STOCK REAL
+# ===============================
+
+stock_actual = (
+    movimientos_validos
+    .groupby(['NumeroParte', 'NombreParte', 'Serial1'], as_index=False)
+    ['Signo']
+    .sum()
+)
+
+# Solo lo que realmente existe en bodega
+en_bodega = stock_actual[stock_actual['Signo'] > 0].copy()
+
+
+# ===============================
+# OBTENER ULTIMA FECHA REAL
+# ===============================
+
+ultimas_fechas = (
+    movimientos_validos
+    .groupby(['NumeroParte', 'NombreParte', 'Serial1'], as_index=False)
+    ['FechaMovimiento']
+    .max()
+)
+
+# Unir fecha al stock actual
+en_bodega = en_bodega.merge(
+    ultimas_fechas,
+    on=['NumeroParte', 'NombreParte', 'Serial1'],
+    how='left'
+)
+
+
+# ===============================
+# ARMAR RESULTADO FINAL
+# ===============================
+
+resultado = en_bodega.rename(columns={
+    'NumeroParte': 'SAP',
+    'NombreParte': 'DESCRIPCION',
+    'Serial1': 'SERIAL',
+    'Signo': 'CANTIDAD',
+    'FechaMovimiento': 'FECHA'
+})
+
+# Selección final (ahora sí existe FECHA)
+resultado = resultado[['SERIAL', 'SAP', 'DESCRIPCION', 'CANTIDAD', 'FECHA']]
 
 OTP = []
 OTH = []
-ESTADO_OTP_CRM = []
+ESTADO_OTP_CRM = [] 
 ESTADO_OTH_CRM = []
 Centro = []
 ALMACEN = []
@@ -163,17 +238,22 @@ doc_reasignado['FECHA_CAMBIO'] = pd.to_datetime(
     errors="coerce"
 ).dt.strftime("%d/%m/%Y")
 
-for i in range (len(doc_reasignado)):
-    for x in range(len(resultado)):
-        if doc_reasignado["SERIAL"].iloc[i] in resultado["SERIAL"].iloc[x]:
-            resultado.loc[x, "OTP"] = doc_reasignado["OTP NUEVA"].iloc[i]
-            resultado.loc[x, "CLIENTE"] = doc_reasignado["NUEVO_CLIENTE"].iloc[i]
-            resultado.loc[x, "Fecha cambio de estatus"] = doc_reasignado["FECHA_CAMBIO"].iloc[i]
-            resultado.loc[x, "Tipo_de_OT"] = "INSTALACIONES"
-            resultado.loc[x, "Estatus"] = "REASIGNADO"
-            resultado.loc[x,"ALMACEN"] = "Q500"
+doc_reasignado_ren = doc_reasignado.rename(columns={
+    'SERIAL': 'SERIAL'
+})
 
+resultado = resultado.merge(
+    doc_reasignado_ren,
+    on='SERIAL',
+    how='left'
+)
 
+# Si existe reasignación, sobreescribir
+resultado.loc[resultado['OTP NUEVA'].notna(), 'OTP'] = resultado['OTP NUEVA']
+resultado.loc[resultado['OTP NUEVA'].notna(), 'CLIENTE'] = resultado['NUEVO_CLIENTE']
+resultado.loc[resultado['OTP NUEVA'].notna(), 'Estatus'] = 'REASIGNADO'
+resultado.loc[resultado['OTP NUEVA'].notna(), 'ALMACEN'] = 'Q500'
+resultado.loc[resultado['OTP NUEVA'].notna(), 'Tipo_de_OT'] = 'INSTALACIONES'
 
 resultado.to_excel("resultado_final.xlsx", index=False)
 
