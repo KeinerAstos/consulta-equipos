@@ -1,9 +1,8 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 import pandas as pd
 import os
-import psycopg2
-from collections import defaultdict
-from psycopg2 import errors
+import openpyxl
+from datetime import datetime
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ruta = os.path.join(BASE_DIR, 'datos', 'Inventario_(19).xlsx')
@@ -210,7 +209,7 @@ for i in range(len(resultado['SERIAL'])):
     Asignado.append('N/A')
     Fecha_de_reporte.append('17/02/2026')
 
-resultado = pd.DataFrame({
+resultado_final = pd.DataFrame({
     "OTP": OTP,
     "OTH": OTH,
     "ESTADO_OTP_CRM": ESTADO_OTP_CRM,
@@ -238,22 +237,129 @@ doc_reasignado['FECHA_CAMBIO'] = pd.to_datetime(
     errors="coerce"
 ).dt.strftime("%d/%m/%Y")
 
-doc_reasignado_ren = doc_reasignado.rename(columns={
-    'SERIAL': 'SERIAL'
-})
-
-resultado = resultado.merge(
-    doc_reasignado_ren,
+resultado_final = resultado_final.merge(
+    doc_reasignado,
     on='SERIAL',
     how='left'
 )
 
-# Si existe reasignación, sobreescribir
-resultado.loc[resultado['OTP NUEVA'].notna(), 'OTP'] = resultado['OTP NUEVA']
-resultado.loc[resultado['OTP NUEVA'].notna(), 'CLIENTE'] = resultado['NUEVO_CLIENTE']
-resultado.loc[resultado['OTP NUEVA'].notna(), 'Estatus'] = 'REASIGNADO'
-resultado.loc[resultado['OTP NUEVA'].notna(), 'ALMACEN'] = 'Q500'
-resultado.loc[resultado['OTP NUEVA'].notna(), 'Tipo_de_OT'] = 'INSTALACIONES'
+# Sobrescribir si está reasignado
+mask = resultado_final['OTP NUEVA'].notna()
 
-resultado.to_excel("resultado_final.xlsx", index=False)
+# Normalizar columnas clave
+resultado_final["SERIAL"] = resultado_final["SERIAL"].astype(str).str.strip()
+resultado_final["Codigo_Sap"] = resultado_final["Codigo_Sap"].astype(str).str.strip()
+resultado_final["Estatus"] = resultado_final["Estatus"].astype(str).str.strip()
+resultado_final.loc[mask, 'OTP'] = resultado_final['OTP NUEVA']
+resultado_final.loc[mask, 'CLIENTE'] = resultado_final['NUEVO_CLIENTE']
+resultado_final.loc[mask, 'Estatus'] = 'REASIGNADO'
+resultado_final.loc[mask, 'ALMACEN'] = 'Q500'
+resultado_final.loc[mask, 'Tipo_de_OT'] = 'INSTALACIONES'
 
+resultado_final.to_excel("resultado_final.xlsx", index=False)
+
+
+app = Flask(__name__, template_folder='frontend')
+
+
+@app.route("/buscar_seriales_sap", methods=["POST"])
+def buscar_seriales_sap():
+
+    sap = str(request.json.get("sap")).strip()
+
+    filtrado = resultado_final[
+        (resultado_final["Codigo_Sap"].astype(str).str.strip() == sap) &
+        (resultado_final["Estatus"] == "STOCK")
+    ]
+
+    seriales = filtrado["SERIAL"].head(10).tolist()
+
+    return jsonify({
+        "existe": len(seriales) > 0,
+        "seriales": seriales
+    })
+
+
+@app.route("/buscar_serial", methods=["POST"])
+def buscar_serial():
+
+    serial = str(request.json.get("serial")).strip()
+
+    fila = resultado_final[
+        resultado_final["SERIAL"].astype(str).str.strip() == serial
+    ]
+
+    if not fila.empty:
+
+        fila = fila.iloc[0]
+
+        return jsonify({
+            "existe": True,
+            "sap": fila["Codigo_Sap"],
+            "otp_actual": fila["OTP"],
+            "cliente": fila["CLIENTE"],
+            "estatus": fila["Estatus"]
+        })
+
+    return jsonify({"existe": False})
+    
+@app.route("/guardar_reasignacion", methods=["POST"])
+def guardar_reasignacion():
+
+    # 🔹 Campos generales
+    bodega = request.form.get("bodega")
+    centro = request.form.get("centro")
+    almacen = request.form.get("almacen")
+    otp_nueva = request.form.get("otp_nueva")
+    oth_nueva = request.form.get("oth_nueva")
+    nuevo_cliente = request.form.get("nuevo_cliente")
+    tipo_ot = request.form.get("tipo_ot")
+    fecha_cambio = request.form.get("fecha_cambio")
+
+    # 🔹 Campos tipo lista (tabla)
+    saps = request.form.getlist("sap[]")
+    seriales = request.form.getlist("serial[]")
+    otp_actuales = request.form.getlist("otp_actual[]")
+
+    print("Bodega:", bodega)
+    print("Centro:", centro)
+    print("Seriales:", seriales)
+
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    ruta_re = os.path.join(BASE_DIR, 'datos', 'reasignacion.xlsx')
+
+    workbook = openpyxl.load_workbook(ruta_re)
+    sheet = workbook.active
+
+    # 🔥 Insertar una fila por cada equipo
+    for i in range(len(seriales)):
+
+        nuevo_id = sheet.max_row  # ID automático
+
+        nueva_fila = [
+            nuevo_id,
+            bodega,
+            centro,
+            almacen,
+            saps[i],
+            seriales[i],
+            otp_actuales[i],
+            otp_nueva,
+            oth_nueva,
+            nuevo_cliente,
+            tipo_ot,
+            fecha_cambio
+        ]
+
+        sheet.append(nueva_fila)
+
+    workbook.save(ruta_re)
+
+    return redirect(url_for("home"))
+
+@app.route("/")
+def home():
+    return render_template("reasignacion.html")
+
+if __name__ == "__main__":
+    app.run(debug=True)
