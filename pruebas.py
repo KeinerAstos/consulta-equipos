@@ -1,287 +1,235 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 import pandas as pd
 import os
+import psycopg2
 import openpyxl
-from datetime import datetime
+from collections import defaultdict
+from psycopg2 import errors
+
+app = Flask(__name__, template_folder='frontend')
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 ruta = os.path.join(BASE_DIR, 'datos', 'Inventario_(19).xlsx')
 ruta_envio = os.path.join(BASE_DIR,'datos','ENVIO(7).xlsx')
 ruta_re = os.path.join(BASE_DIR,'datos','reasignacion.xlsx')
 ruta_movi = os.path.join(BASE_DIR,'datos','movimientos.xlsx')
 
-doc_inventario = pd.read_excel(ruta, sheet_name='Inventario')
-doc_aliados = pd.read_excel(ruta_envio, sheet_name="DESPACHO ALIADOS 2026")
-doc_reasignado = pd.read_excel(ruta_re, sheet_name="Hoja1")
-doc_movimiento = pd.read_excel(ruta_movi,sheet_name="Movimientos")
+
+# ==========================================
+# FUNCION PRINCIPAL QUE GENERA EL TABLERO
+# ==========================================
+
+def generar_tablero():
+
+    doc_inventario = pd.read_excel(ruta, sheet_name='Inventario')
+    doc_aliados = pd.read_excel(ruta_envio, sheet_name="DESPACHO ALIADOS 2026")
+    doc_movimiento = pd.read_excel(ruta_movi, sheet_name="Movimientos")
+
+    # -------------------------
+    # LIMPIEZA DE DATOS
+    # -------------------------
+
+    doc_aliados['NºSerieFab'] = doc_aliados['NºSerieFab'].astype(str).str.strip()
+    doc_inventario['Serial1'] = doc_inventario['Serial1'].astype(str).str.strip()
+    doc_movimiento['Serial1'] = doc_movimiento['Serial1'].astype(str).str.strip()
+
+    doc_movimiento.columns = doc_movimiento.columns.str.strip()
+
+    doc_movimiento['Serial1'] = (
+        doc_movimiento['Serial1']
+        .replace(['nan','NaN','','#N/D','#N/A'],'N/A')
+    )
+
+    doc_movimiento['TipoMovimiento'] = (
+        doc_movimiento['TipoMovimiento']
+        .astype(str)
+        .str.strip()
+        .str.upper()
+    )
+
+    # -------------------------
+    # FILTRAR MOVIMIENTOS
+    # -------------------------
+
+    movimientos_validos = doc_movimiento[
+        doc_movimiento['TipoMovimiento'].isin(['INGRESO','SALIDA'])
+    ].copy()
+
+    movimientos_validos['Signo'] = movimientos_validos['TipoMovimiento'].map({
+        'INGRESO':1,
+        'SALIDA':-1
+    })
+
+    # -------------------------
+    # CALCULAR STOCK
+    # -------------------------
+
+    stock_actual = (
+        movimientos_validos
+        .groupby(['NumeroParte','NombreParte','Serial1'], as_index=False)['Signo']
+        .sum()
+    )
+
+    en_bodega = stock_actual[stock_actual['Signo'] > 0].copy()
+
+    ultimas_fechas = (
+        movimientos_validos
+        .groupby(['NumeroParte','NombreParte','Serial1'], as_index=False)['FechaMovimiento']
+        .max()
+    )
+
+    en_bodega = en_bodega.merge(
+        ultimas_fechas,
+        on=['NumeroParte','NombreParte','Serial1'],
+        how='left'
+    )
+
+    resultado = en_bodega.rename(columns={
+        'NumeroParte':'SAP',
+        'NombreParte':'DESCRIPCION',
+        'Serial1':'SERIAL',
+        'Signo':'CANTIDAD',
+        'FechaMovimiento':'FECHA'
+    })
+
+    resultado = resultado[['SERIAL','SAP','DESCRIPCION','CANTIDAD','FECHA']]
+
+    # -----------------------------------
+    # ARMAR TABLA FINAL
+    # -----------------------------------
+
+    filas = []
+
+    for i in range(len(resultado)):
+
+        serial = resultado['SERIAL'].iloc[i]
+
+        if serial in doc_aliados['NºSerieFab'].values:
+
+            fila = doc_aliados[doc_aliados['NºSerieFab'] == serial].iloc[0]
+
+            filas.append({
+                "OTP": fila['OTP'],
+                "OTH": fila['OTH'],
+                "Centro": fila['COD CENTRO'],
+                "ALMACEN": fila['COD ALM'],
+                "Aliado": fila['Destino'],
+                "CLIENTE": fila['CLIENTE'],
+                "Tipo_de_OT": fila['PRC/SOLPED'],
+                "Asignado": "N/A",
+                "Codigo_Sap": fila['Material'],
+                "Descripción": fila['Texto breve de material'],
+                "CANTIDAD": 1,
+                "SERIAL": serial,
+                "Lote": fila['LOTE'],
+                "Estado": "FUNCIONAL",
+                "Estatus": "RESERVADO",
+                "Fecha de ingreso": fila['Fecha']
+            })
+
+        else:
+
+            filas.append({
+                "OTP": "N/A",
+                "OTH": "N/A",
+                "Centro": "C903",
+                "ALMACEN": "A500",
+                "Aliado": "ALGARTECH",
+                "CLIENTE": "N/A",
+                "Tipo_de_OT": "BASE",
+                "Asignado": "N/A",
+                "Codigo_Sap": resultado['SAP'].iloc[i],
+                "Descripción": resultado['DESCRIPCION'].iloc[i],
+                "CANTIDAD": resultado['CANTIDAD'].iloc[i],
+                "SERIAL": serial,
+                "Lote": "VALORADO",
+                "Estado": "FUNCIONAL",
+                "Estatus": "STOCK",
+                "Fecha de ingreso": resultado['FECHA'].iloc[i]
+            })
+
+    resultado_final = pd.DataFrame(filas)
+
+    return resultado_final
 
 
-doc_aliados['NºSerieFab'] = doc_aliados['NºSerieFab'].astype(str).str.strip()
-doc_inventario['Serial1'] = doc_inventario['Serial1'].astype(str).str.strip()
-doc_movimiento['Serial1'] = doc_movimiento['Serial1'].astype(str).str.strip()
+# ==========================================
+# FUNCION REASIGNACIONES
+# ==========================================
 
+def aplicar_reasignaciones(tabla):
 
-# Ordenar por fecha (muy importante)
-doc_movimiento = doc_movimiento.sort_values(by='FechaMovimiento')
+    doc_reasignado = pd.read_excel(ruta_re)
 
-# ===============================
-# LIMPIEZA GENERAL
-# ===============================
+    doc_reasignado.columns = doc_reasignado.columns.str.strip()
 
-# Limpiar nombres de columnas (quita espacios invisibles)
-doc_movimiento.columns = doc_movimiento.columns.str.strip()
+    doc_reasignado['SERIAL'] = doc_reasignado['SERIAL'].astype(str).str.strip()
 
-doc_movimiento['Serial1'] = (
-    doc_movimiento['Serial1']
-    .replace(['nan', 'NaN', '', '#N/D', '#N/A'], 'N/A')
-)
+    tabla['SERIAL'] = tabla['SERIAL'].astype(str).str.strip()
 
-doc_inventario['Serial1'] = (
-    doc_inventario['Serial1']
-    .replace(['nan', 'NaN', '', '#N/D', '#N/A'], 'N/A')
-)
+    tabla = tabla.merge(
+        doc_reasignado[['SERIAL','OTP_NUEVA','NUEVO_CLIENTE']],
+        on='SERIAL',
+        how='left'
+    )
 
+    mask = tabla['OTP_NUEVA'].notna()
 
-# Normalizar tipo movimiento
-doc_movimiento['TipoMovimiento'] = (
-    doc_movimiento['TipoMovimiento']
-    .astype(str)
-    .str.strip()
-    .str.upper()
-)
+    tabla.loc[mask,'OTP'] = tabla.loc[mask,'OTP_NUEVA']
+    tabla.loc[mask,'CLIENTE'] = tabla.loc[mask,'NUEVO_CLIENTE']
+    tabla.loc[mask,'Estatus'] = 'REASIGNADO'
+    tabla.loc[mask,'ALMACEN'] = 'Q500'
+    tabla.loc[mask,'Tipo_de_OT'] = 'INSTALACIONES'
 
-# Ordenar por fecha
-doc_movimiento = doc_movimiento.sort_values(by='FechaMovimiento')
+    return tabla
 
+def obtener_resultado():
 
-# ===============================
-# FILTRAR SOLO INGRESO Y SALIDA
-# ===============================
+    tabla = generar_tablero()
 
-movimientos_validos = doc_movimiento[
-    doc_movimiento['TipoMovimiento'].isin(['INGRESO', 'SALIDA'])
-].copy()
+    tabla = aplicar_reasignaciones(tabla)
 
-# Crear signo matemático
-movimientos_validos['Signo'] = movimientos_validos['TipoMovimiento'].map({
-    'INGRESO': 1,
-    'SALIDA': -1
-})
-
-
-# ===============================
-# CALCULAR STOCK REAL
-# ===============================
-
-stock_actual = (
-    movimientos_validos
-    .groupby(['NumeroParte', 'NombreParte', 'Serial1'], as_index=False)
-    ['Signo']
-    .sum()
-)
-
-# Solo lo que realmente existe en bodega
-en_bodega = stock_actual[stock_actual['Signo'] > 0].copy()
-
-
-# ===============================
-# OBTENER ULTIMA FECHA REAL
-# ===============================
-
-ultimas_fechas = (
-    movimientos_validos
-    .groupby(['NumeroParte', 'NombreParte', 'Serial1'], as_index=False)
-    ['FechaMovimiento']
-    .max()
-)
-
-# Unir fecha al stock actual
-en_bodega = en_bodega.merge(
-    ultimas_fechas,
-    on=['NumeroParte', 'NombreParte', 'Serial1'],
-    how='left'
-)
-
-
-# ===============================
-# ARMAR RESULTADO FINAL
-# ===============================
-
-resultado = en_bodega.rename(columns={
-    'NumeroParte': 'SAP',
-    'NombreParte': 'DESCRIPCION',
-    'Serial1': 'SERIAL',
-    'Signo': 'CANTIDAD',
-    'FechaMovimiento': 'FECHA'
-})
-
-# Selección final (ahora sí existe FECHA)
-resultado = resultado[['SERIAL', 'SAP', 'DESCRIPCION', 'CANTIDAD', 'FECHA']]
-
-OTP = []
-OTH = []
-ESTADO_OTP_CRM = [] 
-ESTADO_OTH_CRM = []
-Centro = []
-ALMACEN = []
-Aliado = []
-Nombre_Almacén = []
-CLIENTE = []
-Tipo_de_OT = []
-Asignado = []
-Codigo_Sap = []
-Descripción = []
-CANTIDAD = []
-SERIAL = []
-lote = []
-Estado = []
-Estatus = []
-Fecha_cambio_de_estatus = []
-Fecha_de_reporte = []
-Fecha_de_ingreso = []
-Días_en_Reserva = []
-
-numero = 0
-
-doc_aliados["Fecha"] = pd.to_datetime(
-    doc_aliados["Fecha"],
-    errors="coerce"
-).dt.strftime("%d/%m/%Y")
-
-doc_inventario['FechaOrden'] = pd.to_datetime(
-    doc_inventario['FechaOrden'],
-    errors="coerce"
-).dt.strftime("%d/%m/%Y")
-
-
-for i in range(len(resultado['SERIAL'])):
-    serial = resultado['SERIAL'].iloc[i]
-
-    if serial in doc_aliados['NºSerieFab'].values:
-        
-        for x in range(len(doc_aliados['NºSerieFab'])):
-            if serial == doc_aliados['NºSerieFab'].iloc[x]:
-                OTP.append(doc_aliados['OTP'].iloc[x])
-                OTH.append(doc_aliados['OTH'].iloc[x])
-                Centro.append(doc_aliados['COD CENTRO'].iloc[x])
-                ALMACEN.append(doc_aliados['COD ALM'].iloc[x])
-                Aliado.append(doc_aliados['Destino'].iloc[x])
-                CLIENTE.append(doc_aliados['CLIENTE'].iloc[x])
-                valor_prc = str(doc_aliados['PRC/SOLPED'].iloc[x]).strip()
-                if valor_prc.upper().startswith("PRC"):
-                    Tipo_de_OT.append(valor_prc)
-                else:
-                    Tipo_de_OT.append("INSTALACIONES")
-                Codigo_Sap.append(doc_aliados['Material'].iloc[x])
-                Descripción.append(doc_aliados['Texto breve de material'].iloc[x])
-                CANTIDAD.append('1')
-                SERIAL.append(serial)
-                lote.append(doc_aliados['LOTE'].iloc[x])
-                Estado.append('FUNCIONAL')
-                Estatus.append('RESERVADO')
-                Fecha_de_ingreso.append(doc_aliados['Fecha'].iloc[x])
-                Fecha_cambio_de_estatus.append(doc_aliados['Fecha'].iloc[x])
-
-
-                numero +=1
-                break   # 🔥 importante para que no duplique
-                
-    else:
-        OTP.append('N/A')
-        OTH.append('N/A')
-        Centro.append('C903')
-        ALMACEN.append('A500')
-        Aliado.append('ALGARTECH')
-        CLIENTE.append('N/A') 
-        Tipo_de_OT.append('BASE')
-        Codigo_Sap.append(resultado['SAP'].iloc[i])
-        Descripción.append(resultado['DESCRIPCION'].iloc[i])
-        CANTIDAD.append(resultado['CANTIDAD'].iloc[i])
-        SERIAL.append(serial)
-        lote.append('VALORADO')
-        Estado.append('FUNCIONAL')
-        Estatus.append('STOCK')
-        Fecha_de_ingreso.append(resultado['FECHA'].iloc[i])
-        Fecha_cambio_de_estatus.append(resultado['FECHA'].iloc[i])
-
-    ESTADO_OTP_CRM.append('N/A')
-    ESTADO_OTH_CRM.append('N/A')
-    Asignado.append('N/A')
-    Fecha_de_reporte.append('17/02/2026')
-
-resultado_final = pd.DataFrame({
-    "OTP": OTP,
-    "OTH": OTH,
-    "ESTADO_OTP_CRM": ESTADO_OTP_CRM,
-    "ESTADO_OTH_CRM": ESTADO_OTH_CRM,
-    "Centro": Centro,
-    "ALMACEN": ALMACEN,
-    "Aliado": Aliado,
-    "CLIENTE": CLIENTE,
-    "Tipo_de_OT": Tipo_de_OT,
-    "Asignado": Asignado,
-    "Codigo_Sap": Codigo_Sap,
-    "Descripción": Descripción,
-    "CANTIDAD": CANTIDAD,
-    "SERIAL": SERIAL,
-    "Lote": lote,
-    "Estado": Estado,
-    "Estatus": Estatus,
-    "Fecha cambio de estatus": Fecha_cambio_de_estatus,
-    "Fecha de reporte": Fecha_de_reporte,
-    "Fecha de ingreso": Fecha_de_ingreso
-})
-
-doc_reasignado['FECHA_CAMBIO'] = pd.to_datetime(
-    doc_reasignado['FECHA_CAMBIO'],
-    errors="coerce"
-).dt.strftime("%d/%m/%Y")
-
-resultado_final = resultado_final.merge(
-    doc_reasignado,
-    on='SERIAL',
-    how='left'
-)
-
-# Sobrescribir si está reasignado
-mask = resultado_final['OTP NUEVA'].notna()
-
-# Normalizar columnas clave
-resultado_final["SERIAL"] = resultado_final["SERIAL"].astype(str).str.strip()
-resultado_final["Codigo_Sap"] = resultado_final["Codigo_Sap"].astype(str).str.strip()
-resultado_final["Estatus"] = resultado_final["Estatus"].astype(str).str.strip()
-resultado_final.loc[mask, 'OTP'] = resultado_final['OTP NUEVA']
-resultado_final.loc[mask, 'CLIENTE'] = resultado_final['NUEVO_CLIENTE']
-resultado_final.loc[mask, 'Estatus'] = 'REASIGNADO'
-resultado_final.loc[mask, 'ALMACEN'] = 'Q500'
-resultado_final.loc[mask, 'Tipo_de_OT'] = 'INSTALACIONES'
-
-resultado_final.to_excel("resultado_final.xlsx", index=False)
-
-
-app = Flask(__name__, template_folder='frontend')
-
+    return tabla
 
 @app.route("/buscar_seriales_sap", methods=["POST"])
 def buscar_seriales_sap():
 
-    sap = str(request.json.get("sap")).strip()
+    resultado = obtener_resultado()
 
-    filtrado = resultado_final[
-        (resultado_final["Codigo_Sap"].astype(str).str.strip() == sap) &
-        (resultado_final["Estatus"] == "STOCK")
+    sap = str(request.json.get("sap", "")).strip()
+
+    resultado["Codigo_Sap"] = (
+        resultado["Codigo_Sap"]
+        .astype(str)
+        .str.strip()
+    )
+
+    resultado["SERIAL"] = (
+        resultado["SERIAL"]
+        .astype(str)
+        .str.strip()
+    )
+
+    filtrado = resultado[
+        resultado["Codigo_Sap"] == sap
     ]
 
-    seriales = filtrado["SERIAL"].head(10).tolist()
+    seriales = (
+        filtrado["SERIAL"]
+        .drop_duplicates()
+        .tolist()
+    )
 
     return jsonify({
-        "existe": len(seriales) > 0,
-        "seriales": seriales
+        "seriales": seriales[:20]
     })
 
 
 @app.route("/buscar_serial", methods=["POST"])
 def buscar_serial():
+
+    resultado_final = obtener_resultado()
 
     serial = str(request.json.get("serial")).strip()
 
@@ -302,11 +250,38 @@ def buscar_serial():
         })
 
     return jsonify({"existe": False})
-    
+
+@app.route("/buscar_sap", methods=["POST"])
+def buscar_sap():
+
+    resultado = obtener_resultado()
+
+    texto = str(request.json.get("sap", "")).strip()
+
+    if texto == "":
+        return jsonify({"saps": []})
+
+    resultado["Codigo_Sap"] = (
+        resultado["Codigo_Sap"]
+        .astype(str)
+        .str.strip()
+    )
+
+    filtrado = resultado[
+        resultado["Codigo_Sap"].str.contains(texto, case=False, na=False)
+    ]
+
+    saps = (
+        filtrado["Codigo_Sap"]
+        .drop_duplicates()
+        .tolist()
+    )
+
+    return jsonify({"saps": saps[:20]})
+
 @app.route("/guardar_reasignacion", methods=["POST"])
 def guardar_reasignacion():
 
-    # 🔹 Campos generales
     bodega = request.form.get("bodega")
     centro = request.form.get("centro")
     almacen = request.form.get("almacen")
@@ -316,14 +291,9 @@ def guardar_reasignacion():
     tipo_ot = request.form.get("tipo_ot")
     fecha_cambio = request.form.get("fecha_cambio")
 
-    # 🔹 Campos tipo lista (tabla)
     saps = request.form.getlist("sap[]")
     seriales = request.form.getlist("serial[]")
     otp_actuales = request.form.getlist("otp_actual[]")
-
-    print("Bodega:", bodega)
-    print("Centro:", centro)
-    print("Seriales:", seriales)
 
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     ruta_re = os.path.join(BASE_DIR, 'datos', 'reasignacion.xlsx')
@@ -331,10 +301,9 @@ def guardar_reasignacion():
     workbook = openpyxl.load_workbook(ruta_re)
     sheet = workbook.active
 
-    # 🔥 Insertar una fila por cada equipo
     for i in range(len(seriales)):
 
-        nuevo_id = sheet.max_row  # ID automático
+        nuevo_id = sheet.max_row
 
         nueva_fila = [
             nuevo_id,
@@ -357,9 +326,23 @@ def guardar_reasignacion():
 
     return redirect(url_for("home"))
 
+
+
+@app.route("/tablero_stock")
+def tablero_stock():
+
+    resultado_final = obtener_resultado()  # recalcula todo
+
+    datos = resultado_final.to_dict(orient="records")
+
+    return render_template(
+        "tablero_stock.html",
+        datos=datos
+    )
+
 @app.route("/")
 def home():
     return render_template("reasignacion.html")
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, port=5000)

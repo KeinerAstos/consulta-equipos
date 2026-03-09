@@ -2,265 +2,369 @@
 <html lang="es">
 
 <head>
-    <meta charset="UTF-8">
-    <title>Reasignación de Equipos</title>
 
-    <style>
-        body {
-            font-family: Arial;
-            padding: 30px;
-            background: #f4f6f9;
-        }
+<meta charset="UTF-8">
+<title>Reasignación de Equipos</title>
 
-        .card {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.08);
-        }
+<style>
 
-        .row {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 15px;
-        }
+body{
+font-family: Arial;
+padding:30px;
+background:#f4f6f9;
+}
 
-        .row input {
-            flex: 1;
-            padding: 8px;
-        }
+.card{
+background:white;
+padding:20px;
+border-radius:10px;
+margin-bottom:20px;
+box-shadow:0 2px 5px rgba(0,0,0,0.08);
+}
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-        }
+.row{
+display:flex;
+gap:15px;
+margin-bottom:15px;
+}
 
-        th,
-        td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: center;
-        }
+.row input,.row select{
+flex:1;
+padding:8px;
+}
 
-        th {
-            background-color: #f1f1f1;
-        }
+table{
+width:100%;
+border-collapse:collapse;
+margin-top:10px;
+}
 
-        input {
-            width: 100%;
-            padding: 6px;
-        }
+th,td{
+border:1px solid #ddd;
+padding:8px;
+text-align:center;
+}
 
-        button {
-            padding: 8px 12px;
-            cursor: pointer;
-            border-radius: 6px;
-        }
+th{
+background:#f1f1f1;
+}
 
-        .btn-add {
-            background: #28a745;
-            color: white;
-            border: none;
-        }
+button{
+padding:8px 12px;
+cursor:pointer;
+border-radius:6px;
+border:none;
+}
 
-        .btn-remove {
-            background: #dc3545;
-            color: white;
-            border: none;
-        }
+.btn-add{background:#28a745;color:white}
+.btn-remove{background:#dc3545;color:white}
+.btn-save{background:#007bff;color:white;width:100%;padding:12px;font-weight:bold}
 
-        .btn-save {
-            background: #007bff;
-            color: white;
-            border: none;
-            width: 100%;
-            padding: 12px;
-            font-weight: bold;
-        }
+.autocomplete-box{
+position:absolute;
+background:white;
+border:1px solid #ccc;
+width:100%;
+max-height:150px;
+overflow-y:auto;
+z-index:999;
+}
 
-        .fila-ok {
-            background-color: #e8f5e9;
-        }
+.autocomplete-item{
+padding:6px;
+cursor:pointer;
+}
 
-        .fila-error {
-            background-color: #ffebee;
-        }
-    </style>
+.autocomplete-item:hover{
+background:#eee;
+}
+
+.input-container{
+position:relative;
+}
+
+.fila-ok{background:#e8fff1}
+.fila-error{background:#ffe8e8}
+
+</style>
+
 </head>
 
 <body>
 
+<a href="/tablero_stock">TABLERO DE EXISTENCIAS EN BODEGA</a>
+
 <form method="POST" action="/guardar_reasignacion">
 
-    <div class="card">
-        <h3>Datos Generales</h3>
+<div class="card">
 
-        <div class="row">
-            <input type="text" name="bodega" placeholder="Bodega" required>
-            <input type="text" name="centro" placeholder="Centro" required>
-            <input type="text" name="almacen" placeholder="Almacén" required>
-        </div>
+<h3>Datos Generales</h3>
 
-        <div class="row">
-            <input type="text" name="otp_nueva" placeholder="OTP Nueva" required>
-            <input type="text" name="oth_nueva" placeholder="OTH Nueva">
-            <input type="text" name="nuevo_cliente" placeholder="Nuevo Cliente" required>
-        </div>
+<div class="row">
 
-        <div class="row">
-            <input type="text" name="tipo_ot" placeholder="Tipo de OT" required>
-            <input type="date" name="fecha_cambio" required>
-        </div>
-    </div>
+<select name="bodega" id="bodega" onchange="llenarCentro()" required>
+<option value="">Seleccione Bodega</option>
+<option value="BOGOTA">BOGOTA</option>
+<option value="CALI">CALI</option>
+<option value="BARRANQUILLA">BARRANQUILLA</option>
+</select>
 
-    <div class="card">
-        <h3>Equipos a Reasignar</h3>
+<select name="almacen" required>
+<option value="">Almacén</option>
+<option value="Q500">Q500</option>
+<option value="A500">A500</option>
+<option value="U032">U032</option>
+</select>
 
-        <table id="tablaEquipos">
-            <thead>
-                <tr>
-                    <th>SAP</th>
-                    <th>Serial</th>
-                    <th>OTP Actual</th>
-                    <th>Acción</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>
-                        <input type="text" name="sap[]" 
-                               onblur="cargarSeriales(this)" required>
-                    </td>
-                    <td>
-                        <input list="listaSeriales1" 
-                               name="serial[]" 
-                               onblur="consultarSerial(this)" required>
-                        <datalist id="listaSeriales1"></datalist>
-                    </td>
-                    <td>
-                        <input type="text" 
-                               name="otp_actual[]" 
-                               class="otp-actual" 
-                               readonly>
-                    </td>
-                    <td>
-                        <button type="button" 
-                                class="btn-remove" 
-                                onclick="eliminarFila(this)">X</button>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+<input type="text" id="centro" name="centro" placeholder="Centro" readonly>
 
-        <br>
-        <button type="button" class="btn-add" onclick="agregarFila()">Agregar Equipo +</button>
-    </div>
+</div>
 
-    <button type="submit" class="btn-save">Guardar Reasignación</button>
+<div class="row">
+<input type="text" name="otp_nueva" placeholder="OTP Nueva" required>
+<input type="text" name="oth_nueva" placeholder="OTH Nueva">
+<input type="text" name="nuevo_cliente" placeholder="Nuevo Cliente" required>
+</div>
+
+<div class="row">
+<input type="text" name="tipo_ot" placeholder="Tipo de OT" required>
+<input type="date" name="fecha_cambio" required>
+</div>
+
+</div>
+
+<div class="card">
+
+<h3>Equipos a Reasignar</h3>
+
+<table id="tablaEquipos">
+
+<thead>
+<tr>
+<th>SAP</th>
+<th>Serial</th>
+<th>OTP Actual</th>
+<th>Acción</th>
+</tr>
+</thead>
+
+<tbody>
+
+<tr>
+
+<td>
+
+<div class="input-container">
+
+<input name="sap[]" oninput="buscarSAP(this)" autocomplete="off">
+
+<div class="autocomplete-box"></div>
+
+</div>
+
+</td>
+
+<td>
+
+<div class="input-container">
+
+<input name="serial[]" oninput="buscarSerial(this)" onchange="consultarSerial(this)" autocomplete="off">
+
+<div class="autocomplete-box"></div>
+
+</div>
+
+</td>
+
+<td>
+<input type="text" name="otp_actual[]" class="otp-actual" readonly>
+</td>
+
+<td>
+<button type="button" class="btn-remove" onclick="eliminarFila(this)">X</button>
+</td>
+
+</tr>
+
+</tbody>
+
+</table>
+
+<br>
+
+<button type="button" class="btn-add" onclick="agregarFila()">Agregar Equipo +</button>
+
+</div>
+
+<button type="submit" class="btn-save">Guardar Reasignación</button>
 
 </form>
 
 <script>
 
-let contador = 1;
+function agregarFila(){
 
-function agregarFila() {
+let tabla=document.querySelector("#tablaEquipos tbody")
 
-    contador++;
+let fila=tabla.insertRow()
 
-    let tabla = document.getElementById("tablaEquipos")
-                        .getElementsByTagName('tbody')[0];
+fila.innerHTML=`
+<td>
+<div class="input-container">
+<input name="sap[]" oninput="buscarSAP(this)" autocomplete="off">
+<div class="autocomplete-box"></div>
+</div>
+</td>
 
-    let nuevaFila = tabla.insertRow();
+<td>
+<div class="input-container">
+<input name="serial[]" oninput="buscarSerial(this)" onchange="consultarSerial(this)" autocomplete="off">
+<div class="autocomplete-box"></div>
+</div>
+</td>
 
-    nuevaFila.innerHTML = `
-        <td>
-            <input type="text" name="sap[]" 
-                   onblur="cargarSeriales(this)" required>
-        </td>
-        <td>
-            <input list="listaSeriales${contador}" 
-                   name="serial[]" 
-                   onblur="consultarSerial(this)" required>
-            <datalist id="listaSeriales${contador}"></datalist>
-        </td>
-        <td>
-            <input type="text" 
-                   name="otp_actual[]" 
-                   class="otp-actual" 
-                   readonly>
-        </td>
-        <td>
-            <button type="button" 
-                    class="btn-remove" 
-                    onclick="eliminarFila(this)">X</button>
-        </td>
-    `;
+<td>
+<input type="text" name="otp_actual[]" class="otp-actual" readonly>
+</td>
+
+<td>
+<button type="button" class="btn-remove" onclick="eliminarFila(this)">X</button>
+</td>
+`
 }
 
-function eliminarFila(btn) {
-    btn.closest("tr").remove();
+function eliminarFila(btn){
+btn.closest("tr").remove()
 }
 
-async function cargarSeriales(input) {
+async function buscarSAP(input){
 
-    let sap = input.value;
+let texto=input.value.trim()
 
-    let response = await fetch("/buscar_seriales_sap", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sap: sap })
-    });
+let box=input.parentElement.querySelector(".autocomplete-box")
 
-    let data = await response.json();
+box.innerHTML=""
 
-    let fila = input.closest("tr");
-    let datalist = fila.querySelector("datalist");
+if(texto.length<1)return
 
-    datalist.innerHTML = "";
+let response=await fetch("/buscar_sap",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({sap:texto})
+})
 
-    if (data.existe) {
+let data=await response.json()
 
-        data.seriales.forEach(serial => {
-            let option = document.createElement("option");
-            option.value = serial;
-            datalist.appendChild(option);
-        });
+data.saps.forEach(sap=>{
 
-    } else {
-        alert("No hay seriales disponibles para ese SAP");
-    }
+let div=document.createElement("div")
+div.className="autocomplete-item"
+div.innerText=sap
+
+div.onclick=()=>{
+input.value=sap
+box.innerHTML=""
+cargarSeriales(input)
 }
 
-async function consultarSerial(input) {
+box.appendChild(div)
 
-    let serial = input.value;
+})
 
-    let response = await fetch("/buscar_serial", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ serial: serial })
-    });
+}
 
-    let data = await response.json();
+async function cargarSeriales(input){
 
-    let fila = input.closest("tr");
+let sap=input.value.trim()
 
-    if (data.existe) {
+let fila=input.closest("tr")
 
-        fila.querySelector(".otp-actual").value = data.otp_actual;
-        fila.classList.remove("fila-error");
-        fila.classList.add("fila-ok");
+let serialInput=fila.querySelector("input[name='serial[]']")
 
-    } else {
+let box=serialInput.parentElement.querySelector(".autocomplete-box")
 
-        fila.querySelector(".otp-actual").value = "";
-        fila.classList.remove("fila-ok");
-        fila.classList.add("fila-error");
-        alert("Serial no válido");
-    }
+box.innerHTML=""
+
+let response=await fetch("/buscar_seriales_sap",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({sap:sap})
+})
+
+let data=await response.json()
+
+data.seriales.forEach(serial=>{
+
+let div=document.createElement("div")
+div.className="autocomplete-item"
+div.innerText=serial
+
+div.onclick=()=>{
+serialInput.value=serial
+box.innerHTML=""
+consultarSerial(serialInput)
+}
+
+box.appendChild(div)
+
+})
+
+}
+
+async function buscarSerial(input){
+
+let serial=input.value.trim()
+
+if(serial.length<1)return
+
+let response=await fetch("/buscar_serial",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({serial:serial})
+})
+
+}
+
+async function consultarSerial(input){
+
+let serial=input.value.trim()
+
+let response=await fetch("/buscar_serial",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({serial:serial})
+})
+
+let data=await response.json()
+
+let fila=input.closest("tr")
+
+if(data.existe){
+
+fila.querySelector(".otp-actual").value=data.otp_actual
+fila.classList.add("fila-ok")
+fila.classList.remove("fila-error")
+
+}else{
+
+fila.querySelector(".otp-actual").value=""
+fila.classList.add("fila-error")
+fila.classList.remove("fila-ok")
+
+}
+
+}
+
+function llenarCentro(){
+
+let bodega=document.getElementById("bodega").value
+let centro=document.getElementById("centro")
+
+if(bodega==="BOGOTA")centro.value="C901"
+else if(bodega==="CALI")centro.value="C902"
+else if(bodega==="BARRANQUILLA")centro.value="C903"
+else centro.value=""
+
 }
 
 </script>

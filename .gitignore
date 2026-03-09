@@ -1,6 +1,6 @@
 # Ignorar todos los Excel dentro de datos
 datos/*.xlsx
 pruebas.py
-
+frontend/tablero_stock.html
 # Exceptuar SISTEM.xlsx
 !datos/SISTEM.xlsx
