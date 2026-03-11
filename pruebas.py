@@ -15,26 +15,21 @@ ruta_envio = os.path.join(BASE_DIR,'datos','ENVIO(7).xlsx')
 ruta_re = os.path.join(BASE_DIR,'datos','reasignacion.xlsx')
 ruta_movi = os.path.join(BASE_DIR,'datos','movimientos.xlsx')
 
+resultado_cache = None
+doc_inventario = pd.read_excel(ruta, sheet_name='Inventario')
+doc_aliados = pd.read_excel(ruta_envio, sheet_name="DESPACHO ALIADOS 2026")
+doc_movimiento = pd.read_excel(ruta_movi, sheet_name="Movimientos")
 
+doc_aliados['NºSerieFab'] = doc_aliados['NºSerieFab'].astype(str).str.strip()
+doc_inventario['Serial1'] = doc_inventario['Serial1'].astype(str).str.strip()
+doc_movimiento['Serial1'] = doc_movimiento['Serial1'].astype(str).str.strip()
+
+doc_movimiento.columns = doc_movimiento.columns.str.strip()
 # ==========================================
 # FUNCION PRINCIPAL QUE GENERA EL TABLERO
 # ==========================================
 
-def generar_tablero():
-
-    doc_inventario = pd.read_excel(ruta, sheet_name='Inventario')
-    doc_aliados = pd.read_excel(ruta_envio, sheet_name="DESPACHO ALIADOS 2026")
-    doc_movimiento = pd.read_excel(ruta_movi, sheet_name="Movimientos")
-
-    # -------------------------
-    # LIMPIEZA DE DATOS
-    # -------------------------
-
-    doc_aliados['NºSerieFab'] = doc_aliados['NºSerieFab'].astype(str).str.strip()
-    doc_inventario['Serial1'] = doc_inventario['Serial1'].astype(str).str.strip()
-    doc_movimiento['Serial1'] = doc_movimiento['Serial1'].astype(str).str.strip()
-
-    doc_movimiento.columns = doc_movimiento.columns.str.strip()
+def generar_tablero():  
 
     doc_movimiento['Serial1'] = (
         doc_movimiento['Serial1']
@@ -186,11 +181,26 @@ def aplicar_reasignaciones(tabla):
 
 def obtener_resultado():
 
-    tabla = generar_tablero()
+    global resultado_cache
 
+    if resultado_cache is None:
+
+        tabla = generar_tablero()
+
+        tabla = aplicar_reasignaciones(tabla)
+
+        resultado_cache = tabla
+
+    return resultado_cache
+
+def refrescar_cache():
+
+    global resultado_cache
+
+    tabla = generar_tablero()
     tabla = aplicar_reasignaciones(tabla)
 
-    return tabla
+    resultado_cache = tabla
 
 @app.route("/buscar_seriales_sap", methods=["POST"])
 def buscar_seriales_sap():
@@ -323,7 +333,7 @@ def guardar_reasignacion():
         sheet.append(nueva_fila)
 
     workbook.save(ruta_re)
-
+    refrescar_cache()
     return redirect(url_for("home"))
 
 
