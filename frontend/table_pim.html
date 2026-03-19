@@ -6,67 +6,89 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tablero de Equipos</title>
     <link rel="stylesheet" href="static/css/style_tablero.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
 </head>
 
 <body>
     <header class="header">
-    <div class="header-left">
-      <img src="{{ url_for('static', filename='Rake.jpg') }}" alt="Logo Rake" class="logo">
-    </div>
+        <div class="header-left">
+            <img src="{{ url_for('static', filename='Rake.jpg') }}" alt="Logo Rake" class="logo">
+        </div>
 
-    <nav class="nav">
-      <a href="/" class="nav-link">Inicio</a>
-      <a href="/table" class="nav-link">Tablero</a>
-      <a href="/terreno_seriales" class="nav-link">Tablero Pim</a>
-    </nav>
+        <nav class="nav">
+            <a href="/" class="nav-link">Inicio</a>
+            <a href="/table" class="nav-link">Tablero</a>
+            <a href="/terreno_seriales" class="nav-link">Tablero MEDELLIN</a>
+        </nav>
 
-    <div class="header-right">
-      <a href="/login" class="login-icon" title="Iniciar sesión">
-        <i data-lucide="user"></i>
-      </a>
+        <div class="header-right">
+            <a href="/login" class="login-icon" title="Iniciar sesión">
+                <i data-lucide="user"></i>
+            </a>
 
-      <script>
-        lucide.createIcons();
-      </script>
+            <script>
+                lucide.createIcons();
+            </script>
 
-      <span class="fecha">Última actualización: 10:00 AM - 25/11/2025</span>
-    </div>
-  </header>
+            <span class="fecha">Última actualización: 10:00 AM - 25/11/2025</span>
+        </div>
+    </header>
 
     <main>
-        {% for usuario, equipos in data.items() %}
-        <section class="tablero">
-            <h1>{{ usuario }}</h1>
-            <h3>Equipos Asignados</h3>
 
-            {% if equipos %}
+        <section class="tabla-global">
+            <h2>Inventario de Equipos</h2>
+
             <div class="table-container">
-                <table class="equipos-table">
+                <table id="tablaEquipos" class="tabla-equipos">
                     <thead>
                         <tr>
+                            <th>Usuario</th>
                             <th>SAP</th>
                             <th>Descripción</th>
                             <th>Serial</th>
+                            <th>Fecha</th>
                         </tr>
                     </thead>
+
                     <tbody>
+                        {% for usuario, equipos in data.items() %}
                         {% for e in equipos %}
                         <tr>
+                            <td class="usuario">{{ usuario }}</td>
                             <td>{{ e['sap'] }}</td>
-                            <td>{{ e['descripcion'] }}</td>
-                            <td>{{ e['serial'] }}</td>
+                            <td class="descripcion">{{ e['descripcion'] }}</td>
+                            <td class="serial">{{ e['serial'] }}</td>
+                            <td>{{ e['fecha'] }}</td>
                         </tr>
+                        {% endfor %}
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
-            {% else %}
-            <p class="no-data">No tiene equipos asignados.</p>
-            {% endif %}
         </section>
-        {% endfor %}
-    </main>
 
+    </main>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            $('#tablaEquipos').DataTable({
+                pageLength: 10,
+                lengthMenu: [5, 10, 20, 50],
+                language: {
+                    search: "🔍 Buscar:",
+                    lengthMenu: "Mostrar _MENU_ registros",
+                    info: "Mostrando _START_ a _END_ de _TOTAL_ equipos",
+                    paginate: {
+                        next: "Siguiente",
+                        previous: "Anterior"
+                    },
+                    zeroRecords: "No se encontraron resultados"
+                }
+            });
+        });
+    </script>
 </body>
 
 </html>

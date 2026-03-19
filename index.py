@@ -227,7 +227,7 @@ def terreno_seriales():
     sap = doc_seriales_terreno['codigo_sap'].tolist()
     descripcion = doc_seriales_terreno['descripcion_sap'].tolist()
     nombre_tecnico = doc_seriales_terreno['nombre_tecnico'].tolist()
-
+    fecha_entrega = doc_seriales_terreno['fecha_entrega'].tolist()
     data = defaultdict(list)
 
     for i in range(len(seriales)):
@@ -236,7 +236,8 @@ def terreno_seriales():
             'nombre': tecnico,
             'serial': seriales[i],
             'sap': sap[i],
-            'descripcion': descripcion[i]
+            'descripcion': descripcion[i],
+            'fecha':fecha_entrega[i]
         })
 
     return render_template(

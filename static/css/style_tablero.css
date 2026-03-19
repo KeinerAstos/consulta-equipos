@@ -1,199 +1,15 @@
+/* ================= BASE ================= */
+
 body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: #2e2e2e;
-      /* Gris oscuro */
-      color: #e5e5e5;
-      /* Texto claro */
-      margin: 0;
-      padding: 40px;
-    }
-
-.logo img {
-      height: 45px;
-      width: auto;
-      border-radius: 6px;
-    }
-.btn {
-      display: inline-block;
-      background-color: #545f64;
-      color: white;
-      padding: 10px 20px;
-      border-radius: 8px;
-      text-decoration: none;
-      border: none;
-    }
-
-.btn:hover {
-    background-color: #61a5c2;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #2e2e2e;
+  color: #e5e5e5;
+  margin: 0;
+  padding: 40px;
 }
 
+/* ================= HEADER ================= */
 
-/* === HEADER GENERAL === */
-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background-color: #1e1e1e;
-  padding: 15px 40px;
-  border-radius: 10px;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4);
-  flex-wrap: wrap;
-}
-
-/* === LOGO === */
-.logo img {
-  height: 45px;
-  border-radius: 6px;
-  box-shadow: 0 0 5px rgba(255, 255, 255, 0.1);
-}
-
-/* === BOTONES === */
-#inicio, #tablero {
-  margin: 0 10px;
-}
-
-.btn {
-  background-color: #3b4a51;
-  color: #fff;
-  padding: 10px 20px;
-  border-radius: 8px;
-  text-decoration: none;
-  font-weight: 500;
-  transition: all 0.3s ease;
-}
-
-.btn:hover {
-  background-color: #5a6a72;
-  transform: translateY(-2px);
-  box-shadow: 0 2px 5px rgba(255, 255, 255, 0.15);
-}
-
-/* === CONTENEDOR CENTRAL (BOTONES) === */
-header div#inicio, 
-header div#tablero {
-  display: inline-block;
-}
-
-/* === FECHA === */
-.fecha {
-  color: #c7c7c7;
-  font-size: 0.9rem;
-}
-
-/* === DISTRIBUCIÓN FLEXIBLE === */
-header {
-  gap: 20px;
-}
-
-header .logo {
-  flex: 1;
-}
-
-header #inicio, 
-header #tablero {
-  flex: 0;
-}
-
-header .fecha {
-  flex: 1;
-  text-align: right;
-}
-
-/* === RESPONSIVE === */
-@media (max-width: 700px) {
-  header {
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-  }
-
-  .fecha {
-    text-align: center;
-    margin-top: 10px;
-  }
-}
-main {
-    padding: 20px;
-    display: flex;
-    flex-wrap: wrap; /* 🔹 permite varias filas si se llena */
-    justify-content: center; /* 🔹 centra horizontalmente */
-    align-items: flex-start;
-    gap: 20px;
-    background-color: #2e2e2e;
-}
-
-/* Cada panel (usuario) será una tarjeta compacta */
-section.tablero {
-    background: #1b1b1b;
-    border-radius: 15px;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    padding: 20px;
-    width: 300px; /* 🔹 tamaño fijo para alinear */
-    min-height: 250px;
-    overflow: hidden;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-/* Efecto visual al pasar el mouse */
-section.tablero:hover {
-    transform: scale(1.02);
-    box-shadow: 0 6px 12px rgba(0,0,0,0.3);
-}
-
-/* Titulares */
-section.tablero h1 {
-    color: #ffffff;
-    font-size: 1.2em;
-    margin-bottom: 5px;
-}
-
-section.tablero h3 {
-    color: #bbb;
-    font-size: 0.9em;
-    margin-bottom: 10px;
-}
-
-/* Tabla dentro de cada tarjeta */
-.table-container {
-    overflow-x: hidden;
-}
-
-.equipos-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
-
-.equipos-table th {
-    background-color: #2d89ef;
-    color: white;
-    padding: 8px;
-    text-align: left;
-    font-weight: 600;
-    text-transform: uppercase;
-    font-size: 0.75em;
-}
-
-.equipos-table td {
-    padding: 6px;
-    border-bottom: 1px solid #444;
-    color: #ddd;
-    font-size: 0.8em;
-}
-
-.equipos-table tr:hover {
-    background-color: #333;
-}
-
-.no-data {
-    color: #999;
-    font-style: italic;
-    padding: 10px 0;
-    text-align: center;
-}
-
-
-/* === HEADER BASE === */
 .header {
   display: flex;
   justify-content: space-between;
@@ -202,17 +18,14 @@ section.tablero h3 {
   padding: 10px 40px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
   border-radius: 12px;
-  margin: 20px;
-  color: #d1d5db;
+  margin-bottom: 20px;
 }
 
-/* === LOGO === */
 .logo {
   height: 45px;
   filter: drop-shadow(0 0 5px rgba(100, 149, 237, 0.4));
 }
 
-/* === NAVEGACIÓN === */
 .nav {
   display: flex;
   gap: 30px;
@@ -245,12 +58,16 @@ section.tablero h3 {
   width: 100%;
 }
 
-/* === LOGIN ICON === */
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .login-icon {
   color: #93c5fd;
-  font-size: 1.8rem;
-  margin-right: 15px;
-  transition: all 0.3s ease;
+  font-size: 1.5rem;
+  transition: 0.3s;
 }
 
 .login-icon:hover {
@@ -258,37 +75,186 @@ section.tablero h3 {
   transform: scale(1.1);
 }
 
-/* === FECHA === */
 .fecha {
   font-size: 0.85rem;
   color: #9ca3af;
 }
 
-/* === CONTENEDOR DERECHA === */
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+/* ================= MAIN ================= */
+
+main {
+  padding: 20px;
 }
 
-/* === RESPONSIVE === */
+/* ================= CONTENEDOR TABLA ================= */
+
+.tabla-global {
+  background: #1b1b1b;
+  border-radius: 15px;
+  padding: 20px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+/* Título */
+.tabla-global h2 {
+  margin-bottom: 15px;
+  font-weight: 600;
+  color: #e5e5e5;
+}
+
+/* ================= SCROLL ================= */
+
+.table-container {
+  overflow-x: auto;
+}
+
+/* Scroll personalizado */
+.table-container::-webkit-scrollbar {
+  height: 6px;
+}
+
+.table-container::-webkit-scrollbar-thumb {
+  background: #444;
+  border-radius: 10px;
+}
+
+/* ================= TABLA ================= */
+
+.tabla-equipos {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 900px;
+}
+
+/* Header */
+.tabla-equipos thead {
+  background: linear-gradient(90deg, #2d89ef, #1e6fd9);
+}
+
+.tabla-equipos th {
+  padding: 12px;
+  text-align: left;
+  font-size: 0.75em;
+  text-transform: uppercase;
+  color: white;
+  letter-spacing: 0.5px;
+}
+
+/* Filas */
+.tabla-equipos td {
+  padding: 10px;
+  border-bottom: 1px solid #333;
+  font-size: 0.85em;
+  color: #ddd;
+}
+
+/* Zebra */
+.tabla-equipos tbody tr:nth-child(even) {
+  background: #202020;
+}
+
+/* Hover */
+.tabla-equipos tbody tr:hover {
+  background: #2a2a2a;
+  transition: 0.2s;
+}
+
+/* ================= COLUMNAS ================= */
+
+.usuario {
+  font-weight: bold;
+  color: #2d89ef;
+}
+
+.descripcion {
+  max-width: 400px;
+  white-space: normal;
+  word-break: break-word;
+  color: #e5e5e5;
+}
+
+.serial {
+  font-family: monospace;
+  color: #9ca3af;
+  font-size: 0.8em;
+}
+
+/* ================= RESPONSIVE ================= */
+
 @media (max-width: 768px) {
+
+  body {
+    padding: 10px;
+  }
+
   .header {
     flex-direction: column;
+    gap: 10px;
     text-align: center;
-    padding: 15px;
   }
 
   .nav {
-    margin: 10px 0;
+    flex-wrap: wrap;
+    justify-content: center;
   }
 
-  .header-right {
-    flex-direction: column;
-    gap: 5px;
+  .tabla-global {
+    padding: 15px;
   }
 
-  .fecha {
-    font-size: 0.8rem;
+  .tabla-equipos {
+    font-size: 0.75em;
   }
+
+}
+
+/* ================= DATATABLE CUSTOM ================= */
+
+/* Buscador */
+.dataTables_filter input {
+    background: #1b1b1b;
+    border: 1px solid #333;
+    color: #fff;
+    padding: 6px 10px;
+    border-radius: 8px;
+    margin-left: 5px;
+}
+
+/* Selector de cantidad */
+.dataTables_length select {
+    background: #1b1b1b;
+    color: #fff;
+    border: 1px solid #333;
+    padding: 5px;
+    border-radius: 6px;
+}
+
+/* Texto info */
+.dataTables_info {
+    color: #9ca3af;
+    margin-top: 10px;
+}
+
+/* Paginación */
+.dataTables_paginate {
+    margin-top: 10px;
+}
+
+.dataTables_paginate .paginate_button {
+    background: #1b1b1b !important;
+    color: #ccc !important;
+    border: 1px solid #333 !important;
+    border-radius: 6px;
+    margin: 2px;
+}
+
+.dataTables_paginate .paginate_button:hover {
+    background: #2d89ef !important;
+    color: white !important;
+}
+
+/* Activo */
+.dataTables_paginate .current {
+    background: #2d89ef !important;
+    color: white !important;
 }
