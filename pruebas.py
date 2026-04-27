@@ -1,358 +1,93 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for, session
+"""
+DIAGNÓSTICO DE TRAZABILIDAD DE SERIALES
+========================================
+Ejecuta este script y pega el resultado aquí para identificar
+exactamente por qué algunos seriales no cruzan entre hojas.
+
+Uso:
+    python diagnostico_seriales.py
+"""
+
 import pandas as pd
 import os
-import psycopg2
-import openpyxl
-from collections import defaultdict
-from psycopg2 import errors
-
-app = Flask(__name__, template_folder='frontend')
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-ruta = os.path.join(BASE_DIR, 'datos', 'Inventario_(19).xlsx')
-ruta_envio = os.path.join(BASE_DIR,'datos','ENVIO(7).xlsx')
-ruta_re = os.path.join(BASE_DIR,'datos','reasignacion.xlsx')
-ruta_movi = os.path.join(BASE_DIR,'datos','movimientos.xlsx')
-
-resultado_cache = None
-doc_inventario = pd.read_excel(ruta, sheet_name='Inventario')
-doc_aliados = pd.read_excel(ruta_envio, sheet_name="DESPACHO ALIADOS 2026")
-doc_movimiento = pd.read_excel(ruta_movi, sheet_name="Movimientos")
-
-doc_aliados['NºSerieFab'] = doc_aliados['NºSerieFab'].astype(str).str.strip()
-doc_inventario['Serial1'] = doc_inventario['Serial1'].astype(str).str.strip()
-doc_movimiento['Serial1'] = doc_movimiento['Serial1'].astype(str).str.strip()
-
-doc_movimiento.columns = doc_movimiento.columns.str.strip()
-# ==========================================
-# FUNCION PRINCIPAL QUE GENERA EL TABLERO
-# ==========================================
-
-def generar_tablero():  
-
-    doc_movimiento['Serial1'] = (
-        doc_movimiento['Serial1']
-        .replace(['nan','NaN','','#N/D','#N/A'],'N/A')
-    )
-
-    doc_movimiento['TipoMovimiento'] = (
-        doc_movimiento['TipoMovimiento']
-        .astype(str)
-        .str.strip()
-        .str.upper()
-    )
-
-    # -------------------------
-    # FILTRAR MOVIMIENTOS
-    # -------------------------
-
-    movimientos_validos = doc_movimiento[
-        doc_movimiento['TipoMovimiento'].isin(['INGRESO','SALIDA'])
-    ].copy()
-
-    movimientos_validos['Signo'] = movimientos_validos['TipoMovimiento'].map({
-        'INGRESO':1,
-        'SALIDA':-1
-    })
-
-    # -------------------------
-    # CALCULAR STOCK
-    # -------------------------
-
-    stock_actual = (
-        movimientos_validos
-        .groupby(['NumeroParte','NombreParte','Serial1'], as_index=False)['Signo']
-        .sum()
-    )
-
-    en_bodega = stock_actual[stock_actual['Signo'] > 0].copy()
-
-    ultimas_fechas = (
-        movimientos_validos
-        .groupby(['NumeroParte','NombreParte','Serial1'], as_index=False)['FechaMovimiento']
-        .max()
-    )
-
-    en_bodega = en_bodega.merge(
-        ultimas_fechas,
-        on=['NumeroParte','NombreParte','Serial1'],
-        how='left'
-    )
-
-    resultado = en_bodega.rename(columns={
-        'NumeroParte':'SAP',
-        'NombreParte':'DESCRIPCION',
-        'Serial1':'SERIAL',
-        'Signo':'CANTIDAD',
-        'FechaMovimiento':'FECHA'
-    })
-
-    resultado = resultado[['SERIAL','SAP','DESCRIPCION','CANTIDAD','FECHA']]
-
-    # -----------------------------------
-    # ARMAR TABLA FINAL
-    # -----------------------------------
-
-    filas = []
-
-    for i in range(len(resultado)):
-
-        serial = resultado['SERIAL'].iloc[i]
-
-        if serial in doc_aliados['NºSerieFab'].values:
-
-            fila = doc_aliados[doc_aliados['NºSerieFab'] == serial].iloc[0]
-
-            filas.append({
-                "OTP": fila['OTP'],
-                "OTH": fila['OTH'],
-                "Centro": fila['COD CENTRO'],
-                "ALMACEN": fila['COD ALM'],
-                "Aliado": fila['Destino'],
-                "CLIENTE": fila['CLIENTE'],
-                "Tipo_de_OT": fila['PRC/SOLPED'],
-                "Asignado": "N/A",
-                "Codigo_Sap": fila['Material'],
-                "Descripción": fila['Texto breve de material'],
-                "CANTIDAD": 1,
-                "SERIAL": serial,
-                "Lote": fila['LOTE'],
-                "Estado": "FUNCIONAL",
-                "Estatus": "RESERVADO",
-                "Fecha de ingreso": fila['Fecha']
-            })
-
-        else:
-
-            filas.append({
-                "OTP": "N/A",
-                "OTH": "N/A",
-                "Centro": "C903",
-                "ALMACEN": "A500",
-                "Aliado": "ALGARTECH",
-                "CLIENTE": "N/A",
-                "Tipo_de_OT": "BASE",
-                "Asignado": "N/A",
-                "Codigo_Sap": resultado['SAP'].iloc[i],
-                "Descripción": resultado['DESCRIPCION'].iloc[i],
-                "CANTIDAD": resultado['CANTIDAD'].iloc[i],
-                "SERIAL": serial,
-                "Lote": "VALORADO",
-                "Estado": "FUNCIONAL",
-                "Estatus": "STOCK",
-                "Fecha de ingreso": resultado['FECHA'].iloc[i]
-            })
-
-    resultado_final = pd.DataFrame(filas)
-
-    return resultado_final
-
-
-# ==========================================
-# FUNCION REASIGNACIONES
-# ==========================================
-
-def aplicar_reasignaciones(tabla):
-
-    doc_reasignado = pd.read_excel(ruta_re)
-
-    doc_reasignado.columns = doc_reasignado.columns.str.strip()
-
-    doc_reasignado['SERIAL'] = doc_reasignado['SERIAL'].astype(str).str.strip()
-
-    tabla['SERIAL'] = tabla['SERIAL'].astype(str).str.strip()
-
-    tabla = tabla.merge(
-        doc_reasignado[['SERIAL','OTP_NUEVA','NUEVO_CLIENTE']],
-        on='SERIAL',
-        how='left'
-    )
-
-    mask = tabla['OTP_NUEVA'].notna()
-
-    tabla.loc[mask,'OTP'] = tabla.loc[mask,'OTP_NUEVA']
-    tabla.loc[mask,'CLIENTE'] = tabla.loc[mask,'NUEVO_CLIENTE']
-    tabla.loc[mask,'Estatus'] = 'REASIGNADO'
-    tabla.loc[mask,'ALMACEN'] = 'Q500'
-    tabla.loc[mask,'Tipo_de_OT'] = 'INSTALACIONES'
-
-    return tabla
-
-def obtener_resultado():
-
-    global resultado_cache
-
-    if resultado_cache is None:
-
-        tabla = generar_tablero()
-
-        tabla = aplicar_reasignaciones(tabla)
-
-        resultado_cache = tabla
-
-    return resultado_cache
-
-def refrescar_cache():
-
-    global resultado_cache
-
-    tabla = generar_tablero()
-    tabla = aplicar_reasignaciones(tabla)
-
-    resultado_cache = tabla
-
-@app.route("/buscar_seriales_sap", methods=["POST"])
-def buscar_seriales_sap():
-
-    resultado = obtener_resultado()
-
-    sap = str(request.json.get("sap", "")).strip()
-
-    resultado["Codigo_Sap"] = (
-        resultado["Codigo_Sap"]
-        .astype(str)
-        .str.strip()
-    )
-
-    resultado["SERIAL"] = (
-        resultado["SERIAL"]
-        .astype(str)
-        .str.strip()
-    )
-
-    filtrado = resultado[
-        resultado["Codigo_Sap"] == sap
-    ]
-
-    seriales = (
-        filtrado["SERIAL"]
-        .drop_duplicates()
-        .tolist()
-    )
-
-    return jsonify({
-        "seriales": seriales[:20]
-    })
-
-
-@app.route("/buscar_serial", methods=["POST"])
-def buscar_serial():
-
-    resultado_final = obtener_resultado()
-
-    serial = str(request.json.get("serial")).strip()
-
-    fila = resultado_final[
-        resultado_final["SERIAL"].astype(str).str.strip() == serial
-    ]
-
-    if not fila.empty:
-
-        fila = fila.iloc[0]
-
-        return jsonify({
-            "existe": True,
-            "sap": fila["Codigo_Sap"],
-            "otp_actual": fila["OTP"],
-            "cliente": fila["CLIENTE"],
-            "estatus": fila["Estatus"]
-        })
-
-    return jsonify({"existe": False})
-
-@app.route("/buscar_sap", methods=["POST"])
-def buscar_sap():
-
-    resultado = obtener_resultado()
-
-    texto = str(request.json.get("sap", "")).strip()
-
-    if texto == "":
-        return jsonify({"saps": []})
-
-    resultado["Codigo_Sap"] = (
-        resultado["Codigo_Sap"]
-        .astype(str)
-        .str.strip()
-    )
-
-    filtrado = resultado[
-        resultado["Codigo_Sap"].str.contains(texto, case=False, na=False)
-    ]
-
-    saps = (
-        filtrado["Codigo_Sap"]
-        .drop_duplicates()
-        .tolist()
-    )
-
-    return jsonify({"saps": saps[:20]})
-
-@app.route("/guardar_reasignacion", methods=["POST"])
-def guardar_reasignacion():
-
-    bodega = request.form.get("bodega")
-    centro = request.form.get("centro")
-    almacen = request.form.get("almacen")
-    otp_nueva = request.form.get("otp_nueva")
-    oth_nueva = request.form.get("oth_nueva")
-    nuevo_cliente = request.form.get("nuevo_cliente")
-    tipo_ot = request.form.get("tipo_ot")
-    fecha_cambio = request.form.get("fecha_cambio")
-
-    saps = request.form.getlist("sap[]")
-    seriales = request.form.getlist("serial[]")
-    otp_actuales = request.form.getlist("otp_actual[]")
-
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    ruta_re = os.path.join(BASE_DIR, 'datos', 'reasignacion.xlsx')
-
-    workbook = openpyxl.load_workbook(ruta_re)
-    sheet = workbook.active
-
-    for i in range(len(seriales)):
-
-        nuevo_id = sheet.max_row
-
-        nueva_fila = [
-            nuevo_id,
-            bodega,
-            centro,
-            almacen,
-            saps[i],
-            seriales[i],
-            otp_actuales[i],
-            otp_nueva,
-            oth_nueva,
-            nuevo_cliente,
-            tipo_ot,
-            fecha_cambio
-        ]
-
-        sheet.append(nueva_fila)
-
-    workbook.save(ruta_re)
-    refrescar_cache()
-    return redirect(url_for("home"))
-
-
-
-@app.route("/tablero_stock")
-def tablero_stock():
-
-    resultado_final = obtener_resultado()  # recalcula todo
-
-    datos = resultado_final.to_dict(orient="records")
-
-    return render_template(
-        "tablero_stock.html",
-        datos=datos
-    )
-
-@app.route("/")
-def home():
-    return render_template("reasignacion.html")
-
-if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+ruta_sistem = os.path.join(BASE_DIR, 'datos', 'SISTEM.xlsx')
+
+print("=" * 60)
+print("CARGANDO HOJAS DE SISTEM.xlsx...")
+print("=" * 60)
+
+doc_envios       = pd.read_excel(ruta_sistem, sheet_name='ENVIOS')
+doc_entradas     = pd.read_excel(ruta_sistem, sheet_name='ENTRADAS')
+doc_devoluciones = pd.read_excel(ruta_sistem, sheet_name='DEVOLUCIONES')
+doc_salidas      = pd.read_excel(ruta_sistem, sheet_name='SALIDAS')
+doc_entregas     = pd.read_excel(ruta_sistem, sheet_name='ENTREGAS')
+
+# Normalizar columnas
+for df in [doc_entradas, doc_devoluciones, doc_salidas, doc_entregas, doc_envios]:
+    df.columns = df.columns.str.strip()
+
+# ── 1. TIPOS DE DATO REALES ───────────────────────────────────────────────────
+print("\n[1] TIPO DE DATO DEL SERIAL POR HOJA")
+print("-" * 40)
+print(f"  ENVIOS       → NºSerieFab : {doc_envios['NºSerieFab'].dtype}")
+print(f"  ENTRADAS     → Serial     : {doc_entradas['Serial'].dtype}")
+print(f"  DEVOLUCIONES → Serial     : {doc_devoluciones['Serial'].dtype}")
+print(f"  SALIDAS      → Serial     : {doc_salidas['Serial'].dtype}")
+print(f"  ENTREGAS     → Serial     : {doc_entregas['Serial'].dtype}")
+
+# ── 2. LIMPIAR Y CONSTRUIR SETS ───────────────────────────────────────────────
+def limpiar(serie):
+    return serie.astype(str).str.strip().str.replace(r'\s+', ' ', regex=True)
+
+envios_seriales    = set(limpiar(doc_envios['NºSerieFab']))
+entradas_seriales  = set(limpiar(doc_entradas['Serial']))
+dev_seriales       = set(limpiar(doc_devoluciones['Serial']))
+salidas_seriales   = set(limpiar(doc_salidas['Serial']))
+entregas_seriales  = set(limpiar(doc_entregas['Serial']))
+
+todos_movimientos  = entradas_seriales | dev_seriales | salidas_seriales | entregas_seriales
+
+# ── 3. SERIALES QUE DEBERÍAN CRUZAR PERO NO CRUZAN ───────────────────────────
+sin_cruce = envios_seriales - todos_movimientos
+sin_cruce = {s for s in sin_cruce if s not in ('nan', 'NaN', '', '#N/D', '#N/A')}
+
+print(f"\n[2] SERIALES EN ENVIOS SIN NINGÚN MOVIMIENTO: {len(sin_cruce)}")
+print("-" * 40)
+
+# Mostrar los primeros 10 con análisis detallado
+muestra = list(sin_cruce)[:10]
+for serial in muestra:
+    print(f"\n  Serial problemático : {repr(serial)}")
+    print(f"  Longitud            : {len(serial)}")
+    print(f"  Bytes (utf-8)       : {serial.encode('utf-8')}")
+
+    # Buscar si existe algo parecido en movimientos (fuzzy manual)
+    candidatos = [s for s in todos_movimientos if serial.strip() in s or s in serial.strip()]
+    if candidatos:
+        print(f"  ⚠️  Posibles matches cercanos en movimientos:")
+        for c in candidatos[:3]:
+            print(f"      → {repr(c)}  (longitud: {len(c)})")
+    else:
+        print(f"  ✗  No existe ningún serial parecido en movimientos")
+
+# ── 4. MUESTRA DE SERIALES QUE SÍ CRUZAN (control) ──────────────────────────
+si_cruzan = envios_seriales & todos_movimientos
+si_cruzan = {s for s in si_cruzan if s not in ('nan', 'NaN', '')}
+
+print(f"\n[3] SERIALES EN ENVIOS QUE SÍ CRUZAN CON MOVIMIENTOS: {len(si_cruzan)}")
+print("-" * 40)
+muestra_ok = list(si_cruzan)[:3]
+for serial in muestra_ok:
+    print(f"  ✓ {repr(serial)}")
+
+# ── 5. RESUMEN ────────────────────────────────────────────────────────────────
+print("\n" + "=" * 60)
+print("RESUMEN")
+print("=" * 60)
+print(f"  Total seriales en ENVIOS       : {len(envios_seriales)}")
+print(f"  Con al menos 1 movimiento      : {len(si_cruzan)}")
+print(f"  Sin ningún movimiento (falla)  : {len(sin_cruce)}")
+print(f"  % de falla                     : {len(sin_cruce)/len(envios_seriales)*100:.1f}%")
+print("=" * 60)

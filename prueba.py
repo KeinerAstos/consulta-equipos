@@ -17,29 +17,61 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ruta_sistem = os.path.join(BASE_DIR, 'datos', 'SISTEM.xlsx')
 ruta_re     = os.path.join(BASE_DIR, 'datos', 'reasignacion.xlsx')
 
+def limpiar_serial(col):
+    """Limpieza estándar de seriales — aplicar siempre antes de cualquier comparación."""
+    return (
+        col.astype(str)
+           .str.upper()
+           .str.strip()
+           .str.replace(r'\s+', '', regex=True)
+           .str.replace(r'\.0$', '', regex=True)
+    )
+
 def cargar_sistem():
     """
-    Lee todas las hojas históricas de SISTEM.xlsx y devuelve los DataFrames limpios.
-    Se llama al arrancar y cada vez que se refresca el caché.
+    Lee todas las hojas históricas de SISTEM.xlsx.
+    Toda la limpieza de datos ocurre aquí una sola vez.
     """
-    doc_entradas     = pd.read_excel(ruta_sistem, sheet_name='ENTRADAS')
-    doc_devoluciones = pd.read_excel(ruta_sistem, sheet_name='DEVOLUCIONES')
-    doc_salidas      = pd.read_excel(ruta_sistem, sheet_name='SALIDAS')
-    doc_entregas     = pd.read_excel(ruta_sistem, sheet_name='ENTREGAS')
-    doc_envios       = pd.read_excel(ruta_sistem, sheet_name='ENVIOS')
+    sheets = pd.read_excel(
+        ruta_sistem,
+        sheet_name=['ENTRADAS', 'DEVOLUCIONES', 'SALIDAS', 'ENTREGAS', 'ENVIOS'],
+        dtype=str          # leer todo como texto evita que Excel convierta seriales a float
+    )
 
-    # Normalizar nombres de columna (quitar espacios)
+    doc_entradas     = sheets['ENTRADAS']
+    doc_devoluciones = sheets['DEVOLUCIONES']
+    doc_salidas      = sheets['SALIDAS']
+    doc_entregas     = sheets['ENTREGAS']
+    doc_envios       = sheets['ENVIOS']
+
+    # Normalizar nombres de columna
     for df in [doc_entradas, doc_devoluciones, doc_salidas, doc_entregas, doc_envios]:
         df.columns = df.columns.str.strip()
 
-    # Limpiar serial en todas las hojas
+    # Limpiar seriales con función estándar
     for df in [doc_entradas, doc_devoluciones, doc_salidas, doc_entregas]:
-        df['Serial'] = df['Serial'].astype(str).str.strip()
+        if 'Serial' in df.columns:
+            df['Serial'] = limpiar_serial(df['Serial'])
 
-    doc_envios['NºSerieFab'] = doc_envios['NºSerieFab'].astype(str).str.strip()
+    doc_envios['NºSerieFab'] = limpiar_serial(doc_envios['NºSerieFab'])
+
+    # Parsear fechas solo en columnas que las tienen
+    fecha_map = {
+        'doc_entradas':     'Fecha Ingreso',
+        'doc_devoluciones': 'FECHA SISTEMA.',
+        'doc_salidas':      'Fecha Salida',
+        'doc_entregas':     'Fecha Sistema',
+    }
+    for df, col in [
+        (doc_entradas, 'Fecha Ingreso'),
+        (doc_devoluciones, 'FECHA SISTEMA.'),
+        (doc_salidas, 'Fecha Salida'),
+        (doc_entregas, 'Fecha Sistema')
+    ]:
+        if col in df.columns:
+            df[col] = pd.to_datetime(df[col], errors='coerce')
 
     return doc_entradas, doc_devoluciones, doc_salidas, doc_entregas, doc_envios
-
 
 # Carga inicial
 doc_entradas, doc_devoluciones, doc_salidas, doc_entregas, doc_envios = cargar_sistem()
@@ -50,176 +82,171 @@ resultado_cache = None
 # ==========================================
 # FUNCIÓN PRINCIPAL QUE GENERA EL TABLERO
 # ==========================================
-
+import pandas as pd
+import numpy as np
 def generar_tablero():
     """
-    Reconstruye el stock actual a partir del historial completo de SISTEM.xlsx:
-
-        ENTRADAS     → signo +1  (equipos que ingresaron a bodega)
-        DEVOLUCIONES → signo +1  (equipos devueltos = vuelven a bodega)
-        SALIDAS      → signo -1  (equipos que salieron de bodega)
-        ENTREGAS     → signo -1  (equipos entregados a técnico = salen de bodega)
-
-    Un serial está EN BODEGA si la suma de signos > 0.
+    Versión de Trazabilidad Total: Muestra todos los equipos que han pasado por la bodega.
+    Los equipos que salen no se eliminan, se marcan con estado 'SALIDA' o 'ENTREGA'.
     """
+    BASURA = {'NAN', '', '#N/D', '#N/A', 'NONE', 'NAT', 'N/A', '0', '0.0'}
 
-    # --------------------------------------------------
-    # 1. NORMALIZAR LAS 4 HOJAS AL MISMO ESQUEMA
-    #    Columnas resultado: Serial | SAP | Descripcion | Fecha | Signo
-    # --------------------------------------------------
+    def resolver_col(df, *candidatos):
+        for c in candidatos:
+            for col_real in df.columns:
+                if str(col_real).strip().upper() == str(c).upper():
+                    return col_real
+        return None
 
-    def normalizar(df, fecha_col, descripcion_col, signo, tipo):
-        """Extrae solo las columnas necesarias, asigna el signo y el tipo de movimiento."""
-        sub = df[['Serial', 'Codigo SAP', descripcion_col, fecha_col]].copy()
-        sub.columns = ['Serial', 'SAP', 'Descripcion', 'Fecha']
-        sub['Fecha']  = pd.to_datetime(sub['Fecha'], errors='coerce')
-        sub['Signo']  = signo
-        sub['Tipo']   = tipo          # <-- etiqueta del movimiento
-        sub['Serial'] = sub['Serial'].astype(str).str.strip()
-        sub['SAP']    = sub['SAP'].astype(str).str.strip()
+    def normalizar(df, fecha_col, desc_col, tipo, signo):
+        # 1. Búsqueda flexible de columnas
+        col_serial = resolver_col(df, 'Serial', 'SERIAL', 'Nº Serie', 'NroSerie', 'Nro_Serie', 'Serie', 'NºSerieFab')
+        if col_serial is None:
+            return pd.DataFrame(columns=['Serial','SAP','Descripcion','Fecha','Tipo','Signo'])
+
+        col_fecha = resolver_col(df, fecha_col, 'Fecha', 'FECHA SISTEMA.', 'Fecha Ingreso', 'Fecha Sistema', 'Fecha Salida')
+        col_sap   = resolver_col(df, 'Codigo SAP', 'Material', 'SAP', 'Codigo material', 'CodigoSAP')
+        col_desc  = resolver_col(df, desc_col, 'Descripción SAP', 'Descripción', 'Descripcion', 'Descripción Material')
+
+        # 2. Creación del DataFrame normalizado
+        sub = pd.DataFrame()
+        sub['Serial']      = limpiar_serial(df[col_serial])
+        sub['SAP']         = df[col_sap].astype(str).str.strip() if col_sap else 'N/A'
+        sub['Descripcion'] = df[col_desc].astype(str).str.strip() if col_desc else 'N/A'
+        sub['Fecha'] = pd.to_datetime(
+            df[col_fecha].astype(str).str.strip(),
+            errors='coerce',
+            dayfirst=True,
+            format='mixed'
+        )
+        sub['Tipo']        = tipo
+        sub['Signo']       = signo
+        
+        # Limpieza de nulos y basura
+        sub = sub[~sub['Serial'].isin(BASURA)].dropna(subset=['Serial'])
         return sub
 
-    # Ajusta los nombres de columna si difieren en tu archivo
-    movimientos = pd.concat([
-        normalizar(doc_entradas,     fecha_col='Fecha Ingreso',   descripcion_col='Descripción',     signo=+1, tipo='ENTRADA'),
-        normalizar(doc_devoluciones, fecha_col='FECHA SISTEMA.',  descripcion_col='Descripción',     signo=+1, tipo='DEVOLUCION'),
-        normalizar(doc_salidas,      fecha_col='Fecha Salida',    descripcion_col='Descripción',     signo=-1, tipo='SALIDA'),
-        normalizar(doc_entregas,     fecha_col='Fecha Sistema',   descripcion_col='Descripción SAP', signo=-1, tipo='ENTREGA'),
-    ], ignore_index=True)
-
-    # Descartar filas sin serial válido
-    movimientos = movimientos[
-        ~movimientos['Serial'].isin(['nan', 'NaN', '', '#N/D', '#N/A'])
+    # --- 1. CARGA DE MOVIMIENTOS (Historial completo) ---
+    mov_list = [
+        normalizar(doc_entradas,     'Fecha Ingreso',  'Descripción',     'ENTRADA',    +1),
+        normalizar(doc_devoluciones, 'FECHA SISTEMA.', 'Descripción',     'DEVOLUCION', +1),
+        normalizar(doc_salidas,      'Fecha Salida',   'Descripción',     'SALIDA',     -1),
+        normalizar(doc_entregas,     'Fecha Sistema',  'Descripción SAP', 'ENTREGA',    -1),
     ]
+    movimientos = pd.concat([m for m in mov_list if not m.empty], ignore_index=True)
 
-    # --------------------------------------------------
-    # 2. CALCULAR STOCK ACTUAL POR SERIAL
-    # --------------------------------------------------
+    if movimientos.empty:
+        return pd.DataFrame()
 
-    stock_signos = (
+    # --- 2. DETERMINAR EL ÚLTIMO MOVIMIENTO (Estado Actual) ---
+    # El estado actual es simplemente el movimiento con la fecha/hora más reciente.
+    # Si el Excel incluye hora en la columna de fecha, el desempate es automático y exacto.
+    ultima_info = (
         movimientos
-        .groupby(['Serial', 'SAP', 'Descripcion'], as_index=False)['Signo']
-        .sum()
+        .dropna(subset=['Fecha'])
+        .sort_values(
+            by=['Serial', 'Fecha'],
+            ascending=[True, False],
+            kind='mergesort'
+        )
+        .drop_duplicates(subset=['Serial'], keep='first')
+        .copy()
     )
 
-    # Solo los que siguen en bodega (suma positiva)
-    en_bodega = stock_signos[stock_signos['Signo'] > 0].copy()
+    # --- 3. DICCIONARIOS DE APOYO (ENVIOS Y OBSERVACIONES) ---
+    envios_validos = doc_envios.copy()
+    envios_validos['NºSerieFab'] = limpiar_serial(envios_validos['NºSerieFab'])
+    envios_dict = envios_validos.drop_duplicates('NºSerieFab', keep='last').set_index('NºSerieFab').to_dict('index')
 
-    # Último movimiento por serial: fecha Y tipo
-    idx_ultima = movimientos.dropna(subset=['Fecha']).groupby('Serial')['Fecha'].idxmax()
-    ultimo_mov = (
-        movimientos.loc[idx_ultima, ['Serial', 'Fecha', 'Tipo']]
-        .rename(columns={'Fecha': 'UltimaFecha', 'Tipo': 'UltimoTipo'})
-    )
+    col_obs = resolver_col(doc_entradas, 'Observación', 'Observaciones', 'Motivo', 'OT')
+    obs_dict = {}
+    if col_obs:
+        obs_df = doc_entradas[['Serial', col_obs]].copy()
+        obs_df['Serial'] = limpiar_serial(obs_df['Serial'])
+        obs_dict = obs_df.drop_duplicates('Serial', keep='last').set_index('Serial')[col_obs].to_dict()
 
-    en_bodega = en_bodega.merge(ultimo_mov, on='Serial', how='left')
-
-    # Mapear tipo de movimiento → etiqueta de estado legible
-    mapa_estado = {
-        'ENTRADA':    'DISPONIBLE',
-        'DEVOLUCION': 'DISPONIBLE',
-        'ENTREGA':    'EN ENTREGA',
-        'SALIDA':     'EN SALIDA',
+    # --- 4. CONSTRUCCIÓN DEL TABLERO FINAL ---
+    MAPA_ESTADO = {
+        'ENTRADA':    'DISPONIBLE (BODEGA)', 
+        'DEVOLUCION': 'DISPONIBLE (DEVOLUCION)', 
+        'ENTREGA':    'ENTREGADO (FUERA)', 
+        'SALIDA':     'SALIDO (FUERA)'
     }
-    en_bodega['Estado_Actual'] = en_bodega['UltimoTipo'].map(mapa_estado).fillna('DISPONIBLE')
+    SIN_OT = {'', 'NAN', 'N/A', 'NONE', 'STOCK', 'NAT', '-', 'S/N'}
 
-    # --------------------------------------------------
-    # 3. ARMAR TABLA FINAL
-    # --------------------------------------------------
+    final_rows = []
+    for _, row in ultima_info.iterrows():
+        s = row['Serial']
+        en_env = s in envios_dict
+        env_data = envios_dict.get(s, {})
 
-    filas = []
+        # Si no hay datos en envíos, usamos los datos capturados del historial (ENTRADAS/DEVOLUCIONES)
+        sap_final  = env_data.get('Material', row['SAP'])
+        desc_final = env_data.get('Texto breve de material', row['Descripcion'])
+        
+        # Lógica de Estatus y Almacén basada en el signo del último movimiento
+        obs_val = str(obs_dict.get(s, '')).strip().upper()
+        
+        if row['Signo'] < 0: # Si el último movimiento fue Salida o Entrega
+            estatus = 'HISTORICO / SALIDA'
+            almacen = 'FUERA DE BODEGA'
+            aliado  = env_data.get('Destino', 'CLIENTE FINAL')
+        else: # Si el último movimiento fue Entrada o Devolución (está en bodega)
+            if en_env:
+                estatus = 'RESERVADO'
+                almacen = env_data.get('COD ALM', 'A500')
+                aliado  = env_data.get('Destino', 'ALGARTECH')
+            elif obs_val not in SIN_OT:
+                estatus = 'RESERVADO (MANUAL)'
+                almacen = 'Q500'
+                aliado  = 'TRASLADO / MANUAL'
+            else:
+                estatus = 'STOCK'
+                almacen = 'A500'
+                aliado  = 'BODEGA PROPIA'
 
-    # Seriales ya procesados desde el historial de movimientos
-    seriales_con_historial = set(en_bodega['Serial'].tolist())
-
-    # ── PASO 1: equipos con historial de movimientos ──────────────────────────
-    for _, row in en_bodega.iterrows():
-
-        serial        = row['Serial']
-        sap           = row['SAP']
-        descripcion   = row['Descripcion']
-        fecha         = row['UltimaFecha']
-        cantidad      = int(row['Signo'])
-        estado_actual = row['Estado_Actual']
-
-        if serial in doc_envios['NºSerieFab'].values:
-            envio = doc_envios[doc_envios['NºSerieFab'] == serial].iloc[0]
-            filas.append({
-                "OTP":              envio.get('OTP', 'N/A'),
-                "OTH":              envio.get('OTH', 'N/A'),
-                "Centro":           envio.get('COD CENTRO', 'C903'),
-                "ALMACEN":          envio.get('COD ALM', 'A500'),
-                "Aliado":           envio.get('Destino', 'N/A'),
-                "CLIENTE":          envio.get('CLIENTE', 'N/A'),
-                "Tipo_de_OT":       envio.get('PRC/SOLPED', 'BASE'),
-                "Asignado":         "N/A",
-                "Codigo_Sap":       envio.get('Material', sap),
-                "Descripción":      envio.get('Texto breve de material', descripcion),
-                "CANTIDAD":         1,
-                "SERIAL":           serial,
-                "Lote":             envio.get('LOTE', 'VALORADO'),
-                "Estado":           "FUNCIONAL",
-                "Estado_Actual":    estado_actual,
-                "Estatus":          "RESERVADO",
-                "Fecha de ingreso": envio.get('Fecha', fecha)
-            })
-        else:
-            filas.append({
-                "OTP":              "N/A",
-                "OTH":              "N/A",
-                "Centro":           "C903",
-                "ALMACEN":          "A500",
-                "Aliado":           "ALGARTECH",
-                "CLIENTE":          "N/A",
-                "Tipo_de_OT":       "BASE",
-                "Asignado":         "N/A",
-                "Codigo_Sap":       sap,
-                "Descripción":      descripcion,
-                "CANTIDAD":         cantidad,
-                "SERIAL":           serial,
-                "Lote":             "VALORADO",
-                "Estado":           "FUNCIONAL",
-                "Estado_Actual":    estado_actual,
-                "Estatus":          "STOCK",
-                "Fecha de ingreso": fecha
-            })
-
-    # ── PASO 2: equipos en ENVIOS sin ningún movimiento registrado ────────────
-    #    Nunca entraron físicamente → RESERVADO + PENDIENTE DE INGRESO
-    envios_sin_historial = doc_envios[
-        ~doc_envios['NºSerieFab'].isin(seriales_con_historial)
-    ]
-
-    for _, envio in envios_sin_historial.iterrows():
-
-        serial = str(envio.get('NºSerieFab', 'N/A')).strip()
-
-        if serial in ('nan', 'NaN', '', '#N/D', '#N/A'):
-            continue
-
-        filas.append({
-            "OTP":              envio.get('OTP', 'N/A'),
-            "OTH":              envio.get('OTH', 'N/A'),
-            "Centro":           envio.get('COD CENTRO', 'C903'),
-            "ALMACEN":          envio.get('COD ALM', 'A500'),
-            "Aliado":           envio.get('Destino', 'N/A'),
-            "CLIENTE":          envio.get('CLIENTE', 'N/A'),
-            "Tipo_de_OT":       envio.get('PRC/SOLPED', 'BASE'),
-            "Asignado":         "N/A",
-            "Codigo_Sap":       envio.get('Material', 'N/A'),
-            "Descripción":      envio.get('Texto breve de material', 'N/A'),
-            "CANTIDAD":         1,
-            "SERIAL":           serial,
-            "Lote":             envio.get('LOTE', 'VALORADO'),
-            "Estado":           "FUNCIONAL",
-            "Estado_Actual":    "PENDIENTE DE INGRESO",
-            "Estatus":          "RESERVADO",
-            "Fecha de ingreso": envio.get('Fecha', pd.NaT)
+        final_rows.append({
+            'SERIAL':           s,
+            'OTP':              env_data.get('OTP', obs_val if obs_val not in SIN_OT else 'N/A'),
+            'OTH':              env_data.get('OTH', 'N/A'),
+            'Centro':           env_data.get('COD CENTRO', 'C903'),
+            'ALMACEN':          almacen,
+            'Aliado':           aliado,
+            'CLIENTE':          env_data.get('CLIENTE', 'N/A'),
+            'Tipo_de_OT':       env_data.get('PRC/SOLPED', 'BASE'),
+            'Asignado':         'N/A',
+            'Codigo_Sap':       sap_final,
+            'Descripción':      desc_final,
+            'CANTIDAD':         1,
+            'Lote':             env_data.get('LOTE', 'VALORADO'),
+            'Estado':           'FUNCIONAL',
+            'Estado_Actual':    MAPA_ESTADO.get(row['Tipo'], 'DESCONOCIDO'),
+            'Estatus':          estatus,
+            'Fecha de ingreso': row['Fecha']
         })
 
-    return pd.DataFrame(filas)
+    tablero = pd.DataFrame(final_rows)
 
+    # --- 5. AGREGAR PENDIENTES DE INGRESO ---
+    seriales_con_historial = set(movimientos['Serial'].unique())
+    pendientes = envios_validos[~envios_validos['NºSerieFab'].isin(seriales_con_historial)].copy()
 
+    if not pendientes.empty:
+        p_rows = []
+        for _, p in pendientes.iterrows():
+            p_rows.append({
+                'SERIAL': p['NºSerieFab'], 'OTP': p.get('OTP','N/A'), 'OTH': p.get('OTH','N/A'),
+                'Centro': p.get('COD CENTRO','C903'), 'ALMACEN': p.get('COD ALM','A500'),
+                'Aliado': p.get('Destino','ALGARTECH'), 'CLIENTE': p.get('CLIENTE','N/A'),
+                'Tipo_de_OT': p.get('PRC/SOLPED','BASE'), 'Asignado': 'N/A',
+                'Codigo_Sap': p.get('Material','N/A'), 'Descripción': p.get('Texto breve de material','N/A'),
+                'CANTIDAD': 1, 'Lote': p.get('LOTE','VALORADO'), 'Estado': 'FUNCIONAL',
+                'Estado_Actual': 'PENDIENTE DE INGRESO', 'Estatus': 'RESERVADO',
+                'Fecha de ingreso': pd.NaT
+            })
+        tablero = pd.concat([tablero, pd.DataFrame(p_rows)], ignore_index=True)
+
+    return tablero.sort_values('Fecha de ingreso', ascending=False).reset_index(drop=True)
 # ==========================================
 # FUNCIÓN REASIGNACIONES
 # ==========================================
