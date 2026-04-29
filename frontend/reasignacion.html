@@ -2,372 +2,828 @@
 <html lang="es">
 
 <head>
+  <meta charset="UTF-8">
+  <title>Reasignación de Equipos</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
-<meta charset="UTF-8">
-<title>Reasignación de Equipos</title>
+    :root {
+      --bg: #f0f2f5;
+      --card: #ffffff;
+      --border: #d9dde4;
+      --primary: #1a56db;
+      --primary-dark: #1445b5;
+      --success: #057a55;
+      --success-bg: #f0fdf4;
+      --danger: #c81e1e;
+      --danger-bg: #fef2f2;
+      --text: #1a1f36;
+      --muted: #6b7280;
+      --radius: 8px;
+      --shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+    }
 
-<style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-body{
-font-family: Arial;
-padding:30px;
-background:#f4f6f9;
-}
+    body {
+      font-family: 'IBM Plex Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 32px 24px;
+      min-height: 100vh;
+    }
 
-.card{
-background:white;
-padding:20px;
-border-radius:10px;
-margin-bottom:20px;
-box-shadow:0 2px 5px rgba(0,0,0,0.08);
-}
+    .top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 28px;
+    }
 
-.row{
-display:flex;
-gap:15px;
-margin-bottom:15px;
-}
+    .top-bar h1 {
+      font-size: 1.4rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
 
-.row input,.row select{
-flex:1;
-padding:8px;
-}
+    .top-bar a {
+      font-size: 0.8rem;
+      color: var(--primary);
+      text-decoration: none;
+      border: 1px solid var(--primary);
+      padding: 6px 12px;
+      border-radius: var(--radius);
+      transition: background 0.15s;
+    }
 
-table{
-width:100%;
-border-collapse:collapse;
-margin-top:10px;
-}
+    .top-bar a:hover {
+      background: #eef3ff;
+    }
 
-th,td{
-border:1px solid #ddd;
-padding:8px;
-text-align:center;
-}
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow);
+    }
 
-th{
-background:#f1f1f1;
-}
+    .card h3 {
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin-bottom: 18px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
 
-button{
-padding:8px 12px;
-cursor:pointer;
-border-radius:6px;
-border:none;
-}
+    .row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
 
-.btn-add{background:#28a745;color:white}
-.btn-remove{background:#dc3545;color:white}
-.btn-save{background:#007bff;color:white;width:100%;padding:12px;font-weight:bold}
+    .field {
+      flex: 1;
+      min-width: 160px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
 
-.autocomplete-box{
-position:absolute;
-background:white;
-border:1px solid #ccc;
-width:100%;
-max-height:150px;
-overflow-y:auto;
-z-index:999;
-}
+    .field label {
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--muted);
+    }
 
-.autocomplete-item{
-padding:6px;
-cursor:pointer;
-}
+    input,
+    select {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-family: inherit;
+      font-size: 0.875rem;
+      color: var(--text);
+      background: white;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      outline: none;
+    }
 
-.autocomplete-item:hover{
-background:#eee;
-}
+    input:focus,
+    select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.12);
+    }
 
-.input-container{
-position:relative;
-}
+    input[readonly] {
+      background: #f8f9fb;
+      color: var(--muted);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.82rem;
+    }
 
-.fila-ok{background:#e8fff1}
-.fila-error{background:#ffe8e8}
+    /* ── Table ── */
+    .table-wrapper {
+      overflow-x: auto;
+    }
 
-</style>
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+    }
 
+    th {
+      background: #f8f9fb;
+      border: 1px solid var(--border);
+      padding: 10px 12px;
+      text-align: left;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    td {
+      border: 1px solid var(--border);
+      padding: 8px;
+      vertical-align: middle;
+    }
+
+    .fila-ok td {
+      background: var(--success-bg);
+    }
+
+    .fila-error td {
+      background: var(--danger-bg);
+    }
+
+    /* ── Autocomplete ── */
+    .input-container {
+      position: relative;
+    }
+
+    .autocomplete-box {
+      position: absolute;
+      top: calc(100% + 2px);
+      left: 0;
+      right: 0;
+      background: white;
+      border: 2px solid var(--primary);
+      border-radius: var(--radius);
+      max-height: 200px;
+      overflow-y: auto;
+      z-index: 9999;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+      display: none;
+    }
+
+    .autocomplete-box.visible {
+      display: block !important;
+    }
+
+    .autocomplete-item {
+      padding: 10px 14px;
+      cursor: pointer;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.82rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: background 0.1s;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .autocomplete-item:last-child {
+      border-bottom: none;
+    }
+
+    .autocomplete-item:hover {
+      background: #f0f4ff;
+    }
+
+    /* Badge de disponibles dentro del item SAP */
+    .autocomplete-item .disp-badge {
+      margin-left: auto;
+      font-size: 0.68rem;
+      background: #e0e7ff;
+      color: var(--primary);
+      padding: 1px 6px;
+      border-radius: 10px;
+      white-space: nowrap;
+    }
+
+    .spinner {
+      width: 14px;
+      height: 14px;
+      border: 2px solid var(--border);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      display: none;
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
+    .loading .spinner {
+      display: block;
+    }
+
+    @keyframes spin {
+      to {
+        transform: translateY(-50%) rotate(360deg);
+      }
+    }
+
+    /* ── Buttons ── */
+    button {
+      cursor: pointer;
+      border: none;
+      border-radius: var(--radius);
+      font-family: inherit;
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: background 0.15s, transform 0.1s;
+    }
+
+    .btn-add {
+      background: var(--success);
+      color: white;
+      padding: 9px 16px;
+      margin-top: 14px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-add:hover {
+      background: #046c4e;
+    }
+
+    .btn-remove {
+      background: transparent;
+      color: var(--danger);
+      border: 1px solid #fca5a5;
+      padding: 5px 10px;
+      font-size: 0.8rem;
+    }
+
+    .btn-remove:hover {
+      background: var(--danger-bg);
+    }
+
+    .btn-save {
+      width: 100%;
+      background: var(--primary);
+      color: white;
+      padding: 14px;
+      font-size: 1rem;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      margin-top: 8px;
+    }
+
+    .btn-save:hover {
+      background: var(--primary-dark);
+    }
+
+    .btn-save:active {
+      transform: scale(0.99);
+    }
+
+    /* ── Status badge ── */
+    .status-badge {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .badge-ok {
+      background: #dcfce7;
+      color: var(--success);
+    }
+
+    .badge-error {
+      background: #fee2e2;
+      color: var(--danger);
+    }
+
+    .badge-loading {
+      background: #e0e7ff;
+      color: var(--primary);
+    }
+    
+    .badge-neutral {
+      background: #f3f4f6;
+      color: var(--muted);
+    }
+  </style>
 </head>
 
 <body>
 
-<a href="/tablero_stock">TABLERO DE EXISTENCIAS EN BODEGA</a>
-
-<form method="POST" action="/guardar_reasignacion">
-
-<div class="card">
-
-<h3>Datos Generales</h3>
-
-<div class="row">
-
-<select name="bodega" id="bodega" onchange="llenarCentro()" required>
-<option value="">Seleccione Bodega</option>
-<option value="BOGOTA">BOGOTA</option>
-<option value="CALI">CALI</option>
-<option value="BARRANQUILLA">BARRANQUILLA</option>
-</select>
-
-<select name="almacen" required>
-<option value="">Almacén</option>
-<option value="Q500">Q500</option>
-<option value="A500">A500</option>
-<option value="U032">U032</option>
-</select>
-
-<input type="text" id="centro" name="centro" placeholder="Centro" readonly>
-
-</div>
-
-<div class="row">
-<input type="text" name="otp_nueva" placeholder="OTP Nueva" required>
-<input type="text" name="oth_nueva" placeholder="OTH Nueva">
-<input type="text" name="nuevo_cliente" placeholder="Nuevo Cliente" required>
-</div>
-
-<div class="row">
-<input type="text" name="tipo_ot" placeholder="Tipo de OT" required>
-<input type="date" name="fecha_cambio" required>
-</div>
-
-</div>
-
-<div class="card">
-
-<h3>Equipos a Reasignar</h3>
-
-<table id="tablaEquipos">
-
-<thead>
-<tr>
-<th>SAP</th>
-<th>Serial</th>
-<th>OTP Actual</th>
-<th>Acción</th>
-</tr>
-</thead>
-
-<tbody>
-
-<tr>
-
-<td>
-
-<div class="input-container">
-
-<input name="sap[]" oninput="buscarSAP(this)" autocomplete="off">
-
-<div class="autocomplete-box"></div>
-
-</div>
-
-</td>
-
-<td>
-
-<div class="input-container">
-
-<input name="serial[]" oninput="buscarSerial(this)" onchange="consultarSerial(this)" autocomplete="off">
-
-<div class="autocomplete-box"></div>
-
-</div>
-
-</td>
-
-<td>
-<input type="text" name="otp_actual[]" class="otp-actual" readonly>
-</td>
-
-<td>
-<button type="button" class="btn-remove" onclick="eliminarFila(this)">X</button>
-</td>
-
-</tr>
-
-</tbody>
-
-</table>
-
-<br>
-
-<button type="button" class="btn-add" onclick="agregarFila()">Agregar Equipo +</button>
-
-</div>
-
-<button type="submit" class="btn-save">Guardar Reasignación</button>
-
-</form>
-
-<script>
-
-function agregarFila(){
-
-let tabla=document.querySelector("#tablaEquipos tbody")
-
-let fila=tabla.insertRow()
-
-fila.innerHTML=`
-<td>
-<div class="input-container">
-<input name="sap[]" oninput="buscarSAP(this)" autocomplete="off">
-<div class="autocomplete-box"></div>
-</div>
-</td>
-
-<td>
-<div class="input-container">
-<input name="serial[]" oninput="buscarSerial(this)" onchange="consultarSerial(this)" autocomplete="off">
-<div class="autocomplete-box"></div>
-</div>
-</td>
-
-<td>
-<input type="text" name="otp_actual[]" class="otp-actual" readonly>
-</td>
-
-<td>
-<button type="button" class="btn-remove" onclick="eliminarFila(this)">X</button>
-</td>
-`
-}
-
-function eliminarFila(btn){
-btn.closest("tr").remove()
-}
-
-async function buscarSAP(input){
-
-let texto=input.value.trim()
-
-let box=input.parentElement.querySelector(".autocomplete-box")
-
-box.innerHTML=""
-
-if(texto.length<1)return
-
-let response=await fetch("/buscar_sap",{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({sap:texto})
-})
-
-let data=await response.json()
-
-data.saps.forEach(sap=>{
-
-let div=document.createElement("div")
-div.className="autocomplete-item"
-div.innerText=sap
-
-div.onclick=()=>{
-input.value=sap
-box.innerHTML=""
-cargarSeriales(input)
-}
-
-box.appendChild(div)
-
-})
-
-}
-
-async function cargarSeriales(input){
-
-let sap=input.value.trim()
-
-let fila=input.closest("tr")
-
-let serialInput=fila.querySelector("input[name='serial[]']")
-
-let box=serialInput.parentElement.querySelector(".autocomplete-box")
-
-box.innerHTML=""
-
-let response=await fetch("/buscar_seriales_sap",{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({sap:sap})
-})
-
-let data=await response.json()
-
-data.seriales.forEach(serial=>{
-
-let div=document.createElement("div")
-div.className="autocomplete-item"
-div.innerText=serial
-
-div.onclick=()=>{
-serialInput.value=serial
-box.innerHTML=""
-consultarSerial(serialInput)
-}
-
-box.appendChild(div)
-
-})
-
-}
-
-async function buscarSerial(input){
-
-let serial=input.value.trim()
-
-if(serial.length<1)return
-
-let response=await fetch("/buscar_serial",{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({serial:serial})
-})
-
-}
-
-async function consultarSerial(input){
-
-let serial=input.value.trim()
-
-let response=await fetch("/buscar_serial",{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({serial:serial})
-})
-
-let data=await response.json()
-
-let fila=input.closest("tr")
-
-if(data.existe){
-
-fila.querySelector(".otp-actual").value=data.otp_actual
-fila.classList.add("fila-ok")
-fila.classList.remove("fila-error")
-
-}else{
-
-fila.querySelector(".otp-actual").value=""
-fila.classList.add("fila-error")
-fila.classList.remove("fila-ok")
-
-}
-
-}
-
-function llenarCentro(){
-
-let bodega=document.getElementById("bodega").value
-let centro=document.getElementById("centro")
-
-if(bodega==="BOGOTA")centro.value="C901"
-else if(bodega==="CALI")centro.value="C902"
-else if(bodega==="BARRANQUILLA")centro.value="C903"
-else centro.value=""
-
-}
-
-</script>
+  <div class="page">
+    <!-- Header -->
+    <div class="top-bar">
+      <div>
+        <h1>Reasignación de Equipos</h1>
+        <p class="subtitle">Gestiona cambios de OTP, cliente y ubicación de equipos</p>
+      </div>
+
+      <a href="/tablero_stock" class="btn-link">
+        ↗ Ver Tablero de Existencias
+      </a>
+    </div>
+
+    <form method="POST" action="/guardar_reasignacion">
+
+      <!-- Datos Generales -->
+      <div class="card">
+        <div class="card-header">
+          <h3>Datos Generales</h3>
+        </div>
+
+        <div class="grid-3">
+
+          <div class="field">
+            <label>Bodega</label>
+            <select name="bodega" id="bodega" onchange="llenarCentro()" required>
+              <option value="">Seleccione...</option>
+              <option value="BOGOTA">BOGOTÁ</option>
+              <option value="CALI">CALI</option>
+              <option value="BARRANQUILLA">BARRANQUILLA</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label>Almacén</label>
+            <select name="almacen" required>
+              <option value="">Seleccione...</option>
+              <option value="Q500">Q500</option>
+              <option value="A500">A500</option>
+              <option value="U032">U032</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label>Centro</label>
+            <input type="text" id="centro" name="centro" readonly placeholder="Automático">
+          </div>
+
+          <div class="field">
+            <label>OTP Nueva</label>
+            <input type="text" name="otp_nueva" placeholder="OTP-0000" required>
+          </div>
+
+          <div class="field">
+            <label>OTH Nueva</label>
+            <input type="text" name="oth_nueva" placeholder="OTH-0000">
+          </div>
+
+          <div class="field">
+            <label>Nuevo Cliente</label>
+            <input type="text" name="nuevo_cliente" placeholder="Nombre cliente" required>
+          </div>
+
+          <div class="field">
+            <label>Tipo de OT</label>
+            <input type="text" name="tipo_ot" placeholder="Correctiva / Preventiva" required>
+          </div>
+
+          <div class="field">
+            <label>Fecha de Cambio</label>
+            <input type="date" name="fecha_cambio" required>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Equipos -->
+      <div class="card">
+        <div class="card-header between">
+          <h3>Equipos a Reasignar</h3>
+
+          <button type="button" class="btn-add" onclick="agregarFila()">
+            ＋ Agregar Equipo
+          </button>
+        </div>
+
+        <div class="table-wrapper">
+          <table id="tablaEquipos">
+            <thead>
+              <tr>
+                <th>SAP</th>
+                <th>Serial</th>
+                <th>OTP Actual</th>
+                <th>Estado</th>
+                <th></th>
+              </tr>
+            </thead>
+
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="form-actions">
+        <button type="submit" class="btn-save">
+          Guardar Reasignación
+        </button>
+      </div>
+
+    </form>
+  </div>
+
+  <script>
+    // ─────────────────────────────────────────────────────────────
+    // CACHE
+    // ─────────────────────────────────────────────────────────────
+    const cache = {
+      sap: new Map(),      // texto → [{label, value, disponibles}]
+      seriales: new Map(), // sapCode → [string]
+      serial: new Map()    // serial → data
+    };
+
+    const controllers = new WeakMap();
+
+    // ─────────────────────────────────────────────────────────────
+    // HELPERS
+    // ─────────────────────────────────────────────────────────────
+    function debounce(fn, ms) {
+      let timer;
+      return function (...args) {
+        clearTimeout(timer);
+        timer = setTimeout(() => fn.apply(this, args), ms);
+      };
+    }
+
+    async function fetchConCancelacion(input, url, body) {
+      if (controllers.has(input)) controllers.get(input).abort();
+
+      const ctrl = new AbortController();
+      controllers.set(input, ctrl);
+
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        signal: ctrl.signal
+      });
+
+      return res.json();
+    }
+
+    function setLoading(container, on) {
+      container.classList.toggle("loading", on);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // showBox — soporta items tipo string O {label, value, disponibles}
+    // ─────────────────────────────────────────────────────────────
+    function showBox(box, items, onSelect) {
+      box.innerHTML = "";
+
+      if (!items.length) {
+        box.classList.remove("visible");
+        return;
+      }
+
+      items.forEach(item => {
+        const isObj = typeof item === "object" && item !== null;
+        const label = isObj ? item.label : item;
+        const value = isObj ? item.value : item;
+        const disponibles = isObj ? item.disponibles : null;
+
+        const div = document.createElement("div");
+        div.className = "autocomplete-item";
+
+        const span = document.createElement("span");
+        span.textContent = label;
+        div.appendChild(span);
+
+        // Mostrar badge de disponibles solo para items SAP
+        if (disponibles !== null) {
+          const badge = document.createElement("span");
+          badge.className = "disp-badge";
+          badge.textContent = disponibles + " disp.";
+          div.appendChild(badge);
+        }
+
+        div.addEventListener("mousedown", function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          onSelect(value); // siempre pasa el value (código SAP puro o serial)
+        });
+
+        box.appendChild(div);
+      });
+
+      box.classList.add("visible");
+    }
+
+    function hideBox(box) {
+      if (box) {
+        box.classList.remove("visible");
+      }
+    }
+
+    function hideAllBoxes() {
+      document.querySelectorAll(".autocomplete-box.visible").forEach(b => hideBox(b));
+    }
+
+    document.addEventListener("click", function(e) {
+      if (!e.target.closest(".input-container")) {
+        hideAllBoxes();
+      }
+    });
+
+    // ─────────────────────────────────────────────────────────────
+    // SAP — buscar y elegir
+    // ─────────────────────────────────────────────────────────────
+    const buscarSAP = debounce(async function (input) {
+      const texto = input.value.trim();
+      const box = input.parentElement.querySelector(".autocomplete-box");
+
+      if (texto.length < 2) {
+        hideBox(box);
+        return;
+      }
+
+      // Usar caché si existe
+      if (cache.sap.has(texto)) {
+        showBox(box, cache.sap.get(texto), sapCode => elegirSAP(input, sapCode));
+        return;
+      }
+
+      setLoading(input.parentElement, true);
+
+      try {
+        const data = await fetchConCancelacion(input, "/buscar_sap", { sap: texto });
+
+        // ✅ FIX: convertir objetos {sap, disponibles} a formato {label, value, disponibles}
+        const items = (data.saps || []).map(s => ({
+          label: s.sap,
+          value: s.sap,           // valor puro que se usará al seleccionar
+          disponibles: s.disponibles
+        }));
+
+        cache.sap.set(texto, items);
+        showBox(box, items, sapCode => elegirSAP(input, sapCode));
+
+      } catch (e) {
+        if (e.name !== "AbortError") console.error(e);
+      } finally {
+        setLoading(input.parentElement, false);
+      }
+    }, 300);
+
+    function elegirSAP(input, sapCode) {
+      // ✅ FIX: sapCode es ahora siempre el string del código SAP (ej: "10001234")
+      input.value = sapCode;
+
+      const fila = input.closest("tr");
+      const serialInput = fila.querySelector("input[name='serial[]']");
+      const badge = fila.querySelector(".estado-badge");
+      const otpInput = fila.querySelector(".otp-actual");
+
+      // Limpiar fila
+      serialInput.value = "";
+      otpInput.value = "";
+      badge.textContent = "—";
+      badge.className = "estado-badge badge-neutral";
+      fila.className = "";
+
+      hideBox(input.parentElement.querySelector(".autocomplete-box"));
+
+      // ✅ FIX: ahora sapCode es el string correcto, el fetch va a devolver seriales
+      cargarSerialesParaSAP(serialInput, sapCode);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // SERIALES — cargar para un SAP dado
+    // ─────────────────────────────────────────────────────────────
+    async function cargarSerialesParaSAP(serialInput, sapCode) {
+      const box = serialInput.parentElement.querySelector(".autocomplete-box");
+
+      console.log("Cargando seriales para SAP:", sapCode);
+
+      setLoading(serialInput.parentElement, true);
+
+      try {
+        let listaSeriales = [];
+
+        if (cache.seriales.has(sapCode)) {
+          listaSeriales = cache.seriales.get(sapCode);
+          console.log("Usando caché:", listaSeriales.length, "seriales");
+        } else {
+          // ✅ FIX: sapCode es el string puro del SAP, el endpoint lo encontrará
+          const data = await fetchConCancelacion(serialInput, "/buscar_seriales_sap", { sap: sapCode });
+          listaSeriales = data.seriales || [];
+          cache.seriales.set(sapCode, listaSeriales);
+          console.log("Del servidor:", listaSeriales.length, "seriales");
+        }
+
+        if (listaSeriales.length > 0) {
+          showBox(box, listaSeriales, s => elegirSerial(serialInput, s));
+          setTimeout(() => serialInput.focus(), 100);
+        } else {
+          hideBox(box);
+          console.log("No hay seriales disponibles para SAP:", sapCode);
+        }
+      } catch (e) {
+        console.error("Error cargando seriales:", e);
+      } finally {
+        setLoading(serialInput.parentElement, false);
+      }
+    }
+
+    function cargarSerialesAlFoco(input) {
+      const fila = input.closest("tr");
+      const sapInput = fila.querySelector("input[name='sap[]']");
+      const sap = sapInput.value.trim();
+
+      if (sap && !input.value.trim()) {
+        cargarSerialesParaSAP(input, sap);
+      }
+    }
+
+    const buscarSerial = debounce(async function (input) {
+      const serial = input.value.trim();
+      const fila = input.closest("tr");
+      const sap = fila.querySelector("input[name='sap[]']").value.trim();
+      const box = input.parentElement.querySelector(".autocomplete-box");
+
+      // Si no hay texto pero hay SAP, mostrar seriales en caché
+      if (serial.length === 0 && sap && cache.seriales.has(sap)) {
+        const listaSeriales = cache.seriales.get(sap);
+        showBox(box, listaSeriales, s => elegirSerial(input, s));
+        return;
+      }
+
+      if (serial.length < 2) {
+        hideBox(box);
+        return;
+      }
+
+      setLoading(input.parentElement, true);
+
+      try {
+        const data = await fetchConCancelacion(input, "/buscar_serial", { serial });
+
+        if (data.existe) {
+          aplicarResultadoSerial(input, data);
+          hideBox(box);
+        } else if (data.error) {
+          aplicarResultadoSerial(input, data);
+          hideBox(box);
+        }
+      } catch (e) {
+        if (e.name !== "AbortError") console.error("Error buscando serial:", e);
+      } finally {
+        setLoading(input.parentElement, false);
+      }
+    }, 350);
+
+    function elegirSerial(input, serial) {
+      input.value = serial;
+      hideBox(input.parentElement.querySelector(".autocomplete-box"));
+      consultarSerial(input);
+    }
+
+    async function consultarSerial(input) {
+      const serial = input.value.trim();
+      if (!serial) return;
+
+      if (cache.serial.has(serial)) {
+        aplicarResultadoSerial(input, cache.serial.get(serial));
+        return;
+      }
+
+      setLoading(input.parentElement, true);
+
+      try {
+        const data = await fetchConCancelacion(input, "/buscar_serial", { serial });
+        cache.serial.set(serial, data);
+        aplicarResultadoSerial(input, data);
+      } catch (e) {
+        if (e.name !== "AbortError") console.error(e);
+      } finally {
+        setLoading(input.parentElement, false);
+      }
+    }
+
+    function aplicarResultadoSerial(input, data) {
+      const fila = input.closest("tr");
+      const badge = fila.querySelector(".estado-badge");
+
+      if (data.existe) {
+        fila.querySelector(".otp-actual").value = data.otp_actual || "";
+        fila.className = "fila-ok";
+        badge.textContent = "✓ OK";
+        badge.className = "estado-badge badge-ok";
+      } else {
+        fila.querySelector(".otp-actual").value = "";
+        fila.className = "fila-error";
+        badge.textContent = "✕ " + (data.error || "No encontrado");
+        badge.className = "estado-badge badge-error";
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // FILAS
+    // ─────────────────────────────────────────────────────────────
+    function crearFila() {
+      const tr = document.createElement("tr");
+
+      tr.innerHTML = `
+    <td>
+      <div class="input-container">
+        <input
+          name="sap[]"
+          placeholder="Buscar SAP..."
+          autocomplete="off"
+          oninput="buscarSAP(this)"
+          onfocus="if(this.value.length>=2)buscarSAP(this)"
+        >
+        <div class="spinner"></div>
+        <div class="autocomplete-box"></div>
+      </div>
+    </td>
+
+    <td>
+      <div class="input-container">
+        <input
+          name="serial[]"
+          placeholder="Buscar serial..."
+          autocomplete="off"
+          oninput="buscarSerial(this)"
+          onfocus="cargarSerialesAlFoco(this)"
+        >
+        <div class="spinner"></div>
+        <div class="autocomplete-box"></div>
+      </div>
+    </td>
+
+    <td>
+      <input type="text" class="otp-actual" name="otp_actual[]" readonly placeholder="—">
+    </td>
+
+    <td class="center">
+      <span class="estado-badge badge-neutral">—</span>
+    </td>
+
+    <td class="center">
+      <button type="button" class="btn-remove" onclick="eliminarFila(this)">✕</button>
+    </td>
+  `;
+
+      return tr;
+    }
+
+    function agregarFila() {
+      document.querySelector("#tablaEquipos tbody").appendChild(crearFila());
+    }
+
+    function eliminarFila(btn) {
+      btn.closest("tr").remove();
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // CENTRO
+    // ─────────────────────────────────────────────────────────────
+    const CENTROS = {
+      BOGOTA: "C901",
+      CALI: "C902",
+      BARRANQUILLA: "C903"
+    };
+
+    function llenarCentro() {
+      const v = document.getElementById("bodega").value;
+      document.getElementById("centro").value = CENTROS[v] || "";
+    }
+
+    // INIT
+    agregarFila();
+  </script>
 
 </body>
 </html>

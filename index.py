@@ -4,46 +4,14 @@ import os
 import psycopg2
 from collections import defaultdict
 from psycopg2 import errors
+from services.excel_service_rake import tablas_limpias
+from config import get_connection
 
 # === CONFIGURACIÓN GENERAL ===
 app = Flask(__name__, template_folder='frontend')
 app.secret_key = "clave_super_secreta"  # Necesaria para manejar sesiones
 
-# === CONEXIÓN A LA BASE DE DATOS (Neon PostgreSQL) ===
-def get_connection():
-    return psycopg2.connect(
-        dbname="neondb",
-        user="neondb_owner",
-        password="npg_B0ZyzNDGFb3k",
-        host="ep-cool-snow-ad0pqcmu-pooler.c-2.us-east-1.aws.neon.tech",
-        port="5432",
-        sslmode="require"
-    )
-
-# === CARGA DE ARCHIVOS DE EXCEL ===
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-ruta = os.path.join(BASE_DIR, 'datos', 'SISTEM.xlsx')
-
-doc_entregas = pd.read_excel(ruta, sheet_name='ENTREGAS')
-doc_devoluciones = pd.read_excel(ruta, sheet_name='DEVOLUCIONES')
-doc_salidas = pd.read_excel(ruta, sheet_name='SALIDAS')
-doc_entradas = pd.read_excel(ruta, sheet_name="ENTRADAS")
-doc_stock = pd.read_excel(ruta, sheet_name="STOCK")
-doc_envios = pd.read_excel(ruta, sheet_name="ENVIOS")
-doc_seriales_terreno = pd.read_excel(ruta,sheet_name="TERRENO_SERIALES")
-
-# Limpieza básica
-for df in [doc_entregas, doc_devoluciones, doc_salidas, doc_entradas,doc_stock]:
-    if "Serial" in df.columns:
-        df["Serial"] = df["Serial"].astype(str).str.strip()
-doc_envios["NºSerieFab"] = doc_envios["NºSerieFab"].astype(str).str.strip()
-
-# Conversión segura de columnas tipo fecha
-for df in [doc_entregas, doc_devoluciones, doc_salidas, doc_entradas]:
-    for col in df.columns:
-        col_str = str(col).lower()
-        if "fecha" in col_str:
-            df[col] = pd.to_datetime(df[col], errors="coerce")
+doc_devoluciones,doc_entregas,doc_salidas,doc_entradas,doc_stock,doc_envios,doc_seriales_terreno = tablas_limpias()
 
 # === FUNCIÓN AUXILIAR PARA CONSULTAR DATOS ===
 def obtener_asignaciones():
