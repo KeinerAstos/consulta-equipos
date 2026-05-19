@@ -9,35 +9,26 @@ from config import ruta_re
 
 api = Blueprint("api", __name__)
 
+import time
+
 resultado_cache = None
+cache_time = 0
+CACHE_TTL = 60  # 1 minuto
+
 
 def obtener_resultado():
-    global resultado_cache
-    if resultado_cache is None:
-        # 1. Lectura rápida
-        docs_cache = cargar_sistem() 
-        
-        # 2. Generar tablero
-        tabla = generar_tablero(*docs_cache)
-        
-        # 3. IMPORTANTE: Asegurar que las columnas existan y estén en formato string
-        for col in ["Codigo_Sap", "SERIAL", "Estado_Actual", "Estatus"]:
-            if col in tabla.columns:
-                tabla[col] = tabla[col].astype(str).str.strip()
-        
-        # 4. Aplicar reasignaciones
-        tabla = aplicar_reasignaciones(tabla)
-        
-        # 5. Volver a asegurar formato string después de reasignaciones
-        for col in ["Codigo_Sap", "SERIAL", "Estado_Actual", "Estatus"]:
-            if col in tabla.columns:
-                tabla[col] = tabla[col].astype(str).str.strip()
-        
-        # 6. Resetear índice para búsquedas consistentes
-        tabla = tabla.reset_index(drop=True)
-        
-        resultado_cache = tabla
-            
+    global resultado_cache, cache_time
+
+    if resultado_cache is not None and (time.time() - cache_time) < CACHE_TTL:
+        return resultado_cache
+
+    docs_cache = cargar_sistem()
+    tabla = generar_tablero(*docs_cache)
+    tabla = aplicar_reasignaciones(tabla)
+
+    resultado_cache = tabla
+    cache_time = time.time()
+
     return resultado_cache
 
 def refrescar_cache():
@@ -205,9 +196,85 @@ def guardar_reasignacion():
 
 @api.route("/tablero_stock")
 def tablero_stock():
-    resultado_final = obtener_resultado()
-    datos = resultado_final.to_dict(orient="records")
-    return render_template("tablero_stock.html", datos=datos)
+    return render_template("tablero_stock.html")
+
+
+@api.route("/api/tablero")
+def api_tablero():
+    try:
+        df = obtener_resultado()
+
+        draw = int(request.args.get("draw", 1))
+        start = int(request.args.get("start", 0))
+        length = int(request.args.get("length", 15))
+        search = request.args.get("search[value]", "").strip()
+
+        if df is None or df.empty:
+            return jsonify({
+                "draw": draw,
+                "recordsTotal": 0,
+                "recordsFiltered": 0,
+                "data": []
+            })
+
+        df = df.copy()
+
+        # normalizar columnas
+        df.columns = df.columns.astype(str).str.strip()
+
+        # convertir todo de forma segura (evita Categorical crash)
+        for col in df.columns:
+            df[col] = df[col].astype(str).fillna("")
+
+        if search:
+            mask = df.apply(
+                lambda col: col.str.contains(search, case=False, na=False)
+            ).any(axis=1)
+
+            df = df[mask]
+
+        page = df.iloc[start:start + length]
+
+        return jsonify({
+            "draw": draw,
+            "recordsTotal": len(obtener_resultado()),
+            "recordsFiltered": len(df),
+            "data": page.to_dict("records")
+        })
+
+    except Exception as e:
+        import traceback
+        print("🔥 TABLERO ERROR:")
+        traceback.print_exc()
+
+        return jsonify({
+            "error": str(e),
+            "data": []
+        }), 500
+
+
+@api.route("/api/kpis")
+def api_kpis():
+    try:
+        df = obtener_resultado()
+
+        df = obtener_resultado().copy()
+        df = df.fillna("")
+
+        return jsonify({
+            "total": len(df),
+            "stock": len(df[df["Estatus"] == "STOCK"]),
+            "reservado": len(df[df["Estatus"] == "RESERVADO"]),
+            "reasignado": len(df[df["Estatus"] == "REASIGNADO"])
+        })
+
+    except Exception as e:
+        return jsonify({
+            "total": len(df),
+            "stock": len(df[df["Estatus"].astype(str) == "STOCK"]),
+            "reservado": len(df[df["Estatus"].astype(str) == "RESERVADO"]),
+            "reasignado": len(df[df["Estatus"].astype(str) == "REASIGNADO"])
+        })
 
 @api.route("/debug_cache")
 def debug_cache():

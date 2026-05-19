@@ -1,28 +1,36 @@
 import pandas as pd
+from functools import lru_cache
 from config import ruta_sistem
-from utils.helpers import limpiar_serial
 
+HOJAS = ['ENTRADAS','DEVOLUCIONES','SALIDAS','ENTREGAS','ENVIOS']
 
+COLUMNAS = {
+    "ENTRADAS": ['Serial','Codigo SAP','Descripción','Fecha Ingreso','Observación'],
+    "DEVOLUCIONES": ['Serial','Codigo SAP','Descripción','FECHA SISTEMA.'],
+    "SALIDAS": ['Serial','Codigo SAP','Descripción','Fecha Salida'],
+    "ENTREGAS": ['Serial','Codigo SAP','Descripción SAP','Fecha Sistema'],
+    "ENVIOS": ['NºSerieFab','Material','Texto breve de material','OTP','OTH',
+               'COD CENTRO','COD ALM','Destino','CLIENTE','PRC/SOLPED','LOTE']
+}
+
+@lru_cache(maxsize=1)
 def cargar_sistem():
-    # 1. Leer el Excel
-    sheets = pd.read_excel(
-        ruta_sistem,
-        sheet_name=['ENTRADAS', 'DEVOLUCIONES', 'SALIDAS', 'ENTREGAS', 'ENVIOS'],
-        dtype=str
-    )
-
-    # 2. Extraer CADA hoja explícitamente (Asegúrate de que los nombres coincidan)
-    # Si sheets['ENTRADAS'] no existe por un espacio en blanco, esto fallará aquí y no en el tablero.
     try:
-        return (
-            sheets['ENTRADAS'], 
-            sheets['DEVOLUCIONES'], 
-            sheets['SALIDAS'], 
-            sheets['ENTREGAS'], 
-            sheets['ENVIOS']
-        )
-    except KeyError as e:
-        print(f"Error: No se encontró la hoja {e} en el archivo Excel")
-        # Retornar DataFrames vacíos para que no rompa el código posterior
+        resultado = []
+
+        for hoja in HOJAS:
+            df = pd.read_excel(
+                ruta_sistem,
+                sheet_name=hoja,
+                dtype=str,
+                usecols=COLUMNAS[hoja],
+                engine="openpyxl"
+            )
+            resultado.append(df)
+
+        return tuple(resultado)
+
+    except Exception as e:
+        print(f"Error leyendo excel: {e}")
         empty = pd.DataFrame()
-        return empty, empty, empty, empty, empty
+        return (empty,) * 5
